@@ -27,26 +27,33 @@
           <div class="section-kicker">MISSION CONTROL</div>
           <div class="mission-title-row">
             <div>
-            <h1>Basement scout</h1>
-            <p class="muted">Process &amp; utilities · Level B1</p>
+            <h1>Resin-unit scout</h1>
+            <p class="muted">Epoxy resin solution · B1 pump gallery</p>
             </div>
             <span class="mission-number">01</span>
           </div>
 
           <div class="mission-state" id="missionState">
             <span class="state-orb idle"></span>
-            <span><strong id="stateTitle">Ready at service entrance</strong><small id="stateSub">Scout-01 is staged at Level B1</small></span>
+            <span><strong id="stateTitle">Ready at B1 access door</strong><small id="stateSub">Scout-01 staged in the resin-unit gallery</small></span>
           </div>
 
           <div class="control-block">
             <label class="field-label" for="scenarioSelect">REHEARSAL SCENARIO</label>
             <div class="select-wrap"><select id="scenarioSelect">
-              <option value="gas">Pipe vapor release</option>
-              <option value="heat">Pump bearing overheat</option>
+              <option value="gas">Xylene-line vapour release</option>
+              <option value="heat">Resin-transfer pump overheat</option>
               <option value="blocked">Blocked inspection route</option>
               <option value="baseline">Baseline · no seeded fault</option>
             </select><span class="select-chevron">⌄</span></div>
-            <p class="field-hint">Scenarios are generated inside this virtual facility.</p>
+            <p class="field-hint">Faults are seeded in this virtual process unit.</p>
+          </div>
+
+          <div class="process-context">
+            <div class="process-context-head"><span>PROCESS UNIT</span><i>SIMULATED</i></div>
+            <strong>Reaction → recovery → finishing</strong>
+            <p>Reactor and reflux equipment sit above this gallery. B1 contains transfer pumps, filtered-product lines, utilities, a contained sump and a separated MCC room.</p>
+            <div class="process-sequence"><span>R-201</span><b>›</b><span>D-202</span><b>›</b><span>T-301</span><b>›</b><span>F-401</span></div>
           </div>
 
           <div class="button-row">
@@ -86,12 +93,12 @@
 
         <section class="sim-column">
           <div class="sim-toolbar">
-            <div class="breadcrumbs"><span>FACILITY</span><b>/</b><strong>CHEMICAL BASEMENT · B1</strong></div>
+            <div class="breadcrumbs"><span>RESIN UNIT</span><b>/</b><strong>LOWER PUMP GALLERY · B1</strong></div>
             <div class="toolbar-actions">
               <span class="clock-readout"><span class="clock-icon">◷</span><span id="clockText">00:00</span></span>
               <button class="tool-button active" id="routeBtn"><span>⌁</span> Route</button>
               <button class="tool-button active" id="lightsBtn" title="Toggle basement work lights"><span>◉</span> Lights</button>
-              <button class="tool-button" id="ceilingBtn" title="Show or hide the ceiling cutaway"><span>▱</span> Ceiling</button>
+              <button class="tool-button" id="ceilingBtn" title="Show or hide process-floor slab sections"><span>▱</span> Deck</button>
               <button class="tool-button" id="homeViewBtn" title="Reset camera view"><span>⤢</span> Recenter</button>
             </div>
           </div>
@@ -130,7 +137,7 @@
         </aside>
       </main>
       <div class="toast" id="toast"></div>
-      <div class="modal-backdrop hidden" id="infoModal"><div class="info-modal"><button class="modal-close" id="closeModal">×</button><div class="modal-mark">◈</div><div class="section-kicker">ABOUT PLANTSCOUT</div><h2>Explore before entry.</h2><p>PlantScout is a software-only inspection simulation set in a detailed chemical-plant basement. Scout-01 follows a virtual route through power equipment, pumps, pipework, vessels and drum-transfer areas.</p><p><strong>This is a visual and behavior simulation, not an engineering-accurate plant twin.</strong> All hazard readings are synthetic. It has no connection to real equipment, calibrated instruments, or safety systems; the report cannot authorize human entry.</p><div class="modal-tags"><span>Interactive 3D basement</span><span>Virtual robot route</span><span>Synthetic sensor events</span></div></div></div>
+      <div class="modal-backdrop hidden" id="infoModal"><div class="info-modal"><button class="modal-close" id="closeModal">×</button><div class="modal-mark">◈</div><div class="section-kicker">ABOUT PLANTSCOUT</div><h2>Explore before entry.</h2><p>PlantScout is a software-only inspection simulation of an epoxy-resin solution unit. The upper process level shows a batch reactor, reflux condenser, separator and blend/holding vessel; B1 is the lower pump and utility gallery with filtered-product transfer.</p><p><strong>The process sequence is based on a public EIA process description; the 3D facility layout is an original simulation, not a replica of that factory.</strong> All hazard readings are synthetic. No real plant, calibrated sensor or safety system is connected, and the report cannot authorize human entry.</p><div class="modal-tags"><span>Process-grounded 3D scene</span><span>Virtual rover route</span><span>Synthetic sensor events</span></div></div></div>
     </div>
     <script type="importmap">
       {
