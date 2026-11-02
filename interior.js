@@ -24,6 +24,8 @@ export function buildInterior(scene){
  const metal=new T.MeshStandardMaterial({color:0x62666b,metalness:.6,roughness:.43});
  const dark=new T.MeshStandardMaterial({color:0x282c31,metalness:.5,roughness:.65});
  const yellow=new T.MeshStandardMaterial({color:0xbf943b,roughness:.65});
+ const oxidized=new T.MeshStandardMaterial({map:texture('#5a5852',3),metalness:.46,roughness:.82});
+ const blue=new T.MeshStandardMaterial({color:0x4b6879,metalness:.55,roughness:.51});
  const lamp=new T.MeshBasicMaterial({color:0xf3e6ce,toneMapped:false});
  function box(x,y,z,w,h,d,m=metal,parent=scene){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
  function pipe(a,b,r=.035,m=yellow,parent=scene){const av=new T.Vector3(...a),bv=new T.Vector3(...b),v=bv.clone().sub(av);const o=new T.Mesh(new T.CylinderGeometry(r,r,v.length(),12),m);o.position.copy(av.add(bv).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());parent.add(o);return o;}
@@ -44,6 +46,42 @@ export function buildInterior(scene){
  // Pipe bridges tie the visible bays into one plant rather than isolated displays.
  for(const [y,z,r] of [[6.3,-6.9,.13],[6.65,-6.5,.1],[7,-6.1,.09]]){pipe([-9,y,z],[12,y,z],r,metal);for(const x of [-8,-3,2,7,12]){pipe([x,y,z],[x,8.5,z],.02,dark);box(x,y+.08,z,.32,.08,.32,deckSteel);}}
  for(const [x,z] of [[-5.1,-2.6],[-.8,-2.6],[3.5,-2.6],[7.8,-2.6]]){pipe([x,2.05,z],[x,3.4,z],.09,metal);pipe([x,3.4,z],[x,3.4,-5.6],.09,metal);}
+ // Front-wall service run: bunded utility vessels, instrument air, cable tray and drainage.
+ // These continue the process language across the aisle while leaving a walkable route.
+ for(const [height,radius,material] of [[2.85,.072,blue],[3.18,.065,metal],[3.52,.05,yellow]]){
+  pipe([-12.2,height,7.68],[6.9,height,7.68],radius,material);
+  for(const x of [-11,-8,-5,-2,1,4,6.5]){box(x,height,7.94,.08,.16,.42,dark);box(x,height,8.08,.32,.2,.12,metal);}
+ }
+ for(let x=-12;x<7;x+=.36){box(x,5.18,7.76,.035,.035,.62,deckSteel);}
+ box(-2.55,5.12,7.8,19.2,.09,.67,dark);
+ for(let x=-11.5;x<7;x+=1.8){box(x,5.44,7.94,.06,.6,.08,dark);box(x,5.72,7.94,.32,.08,.08,metal);}
+ const vessel=(x,tag)=>{
+  box(x,.15,6.65,2.15,.3,2.0,oxidized);
+  for(const offset of [-.75,.75])for(const z of [5.85,7.45])box(x+offset,.38,z,.12,.48,.12,dark);
+  const body=new T.Mesh(new T.CylinderGeometry(.52,.52,2.15,32),oxidized);body.position.set(x,1.67,6.65);body.castShadow=body.receiveShadow=true;scene.add(body);
+  for(const y of [.72,1.72,2.68]){const band=new T.Mesh(new T.TorusGeometry(.523,.035,8,32),metal);band.rotation.x=Math.PI/2;band.position.set(x,y,6.65);scene.add(band);}
+  pipe([x,2.8,6.65],[x,3.18,6.65],.075,blue);
+  pipe([x-.52,1.1,6.65],[x-1,1.1,6.65],.065,metal);
+  const dial=new T.Mesh(new T.CylinderGeometry(.16,.16,.055,24),lamp);dial.rotation.z=Math.PI/2;dial.position.set(x-.72,1.35,6.65);scene.add(dial);
+  box(x,.55,7.19,.88,.19,.045,dark);
+  sign(tag,x,.55,7.23,.82,.17);
+ };
+ vessel(-9.3,'UT-01 / CONDENSATE');vessel(-6.55,'UT-02 / COOLING');
+ for(const x of [-9.3,-6.55]){
+  pipe([x,3.18,7.68],[x,3.18,6.65],.065,metal);
+  const wheel=new T.Mesh(new T.TorusGeometry(.18,.027,8,24),yellow);wheel.position.set(x,3.38,7.15);scene.add(wheel);
+ }
+ for(const x of [-3.4,1.25,5.5]){
+  box(x,2,7.91,.9,1.25,.34,dark);box(x,2.05,7.72,.75,.72,.045,metal);
+  for(let i=0;i<3;i++){const gauge=new T.Mesh(new T.CylinderGeometry(.085,.085,.035,20),lamp);gauge.rotation.x=Math.PI/2;gauge.position.set(x-.23+i*.23,2.1,7.685);scene.add(gauge);}
+  pipe([x,2.65,7.75],[x,3.52,7.68],.025,metal);
+ }
+ // Segmented grated drain and worn aisle edge markings.
+ box(-1.75,.018,5.12,19.9,.025,.68,dark);
+ for(let x=-11.65;x<8.1;x+=.13)box(x,.044,5.12,.032,.035,.62,deckSteel);
+ for(const z of [4.82,5.42])box(-1.75,.055,z,19.9,.025,.03,metal);
+ for(const z of [4.7,5.54])for(let x=-11.6;x<8.2;x+=1.2)box(x,.028,z,.72,.015,.025,yellow);
+ for(const x of [-11.7,-7.6,-3.5,.6,4.7])box(x,.03,5.96,.035,.02,.52,oxidized);
  // A small drum-handling station sits beside the product line, clear of the entry path.
  const drumPaint=new T.MeshStandardMaterial({color:0x354656,metalness:.4,roughness:.46});
  for(const x of [.2,1.3]){box(x,.12,3.1,.9,.22,1.1,dark);const body=new T.Mesh(new T.CylinderGeometry(.34,.34,1.04,28),drumPaint);body.position.set(x,.75,3.1);body.castShadow=true;scene.add(body);for(const y of [.25,.52,1.02,1.25]){const rim=new T.Mesh(new T.TorusGeometry(.345,.018,8,28),metal);rim.rotation.x=Math.PI/2;rim.position.set(x,y,3.1);scene.add(rim);}}
@@ -80,20 +118,14 @@ export function buildInterior(scene){
  const particles=[];const puffCanvas=document.createElement('canvas');puffCanvas.width=puffCanvas.height=64;const pg=puffCanvas.getContext('2d'),grad=pg.createRadialGradient(32,32,0,32,32,32);grad.addColorStop(0,'#e4ebeac0');grad.addColorStop(1,'#e4ebea00');pg.fillStyle=grad;pg.fillRect(0,0,64,64);const puffTex=new T.CanvasTexture(puffCanvas);
  for(let i=0;i<28;i++){const p=new T.Sprite(new T.SpriteMaterial({map:puffTex,transparent:true,opacity:0,depthWrite:false}));scene.add(p);particles.push(p);}
  // Walking clearance keeps the visitor away from equipment bases and walls.
- const blocked=[[ -.4,1.9,2.5,3.7],[-13,-7.3,-8,-3.2],[-7.2,9.8,-3.7,-1.25],[-7,-2.1,2.1,4.1],[4.6,6.3,2.2,4.1],[7,9,2.5,4.5],[9.7,13,2.2,7.6],[10.7,13.3,5.8,7.4]];
- const canWalk=(x,z)=>x>-12.7&&x<12.7&&z>-7.5&&z<7.65&&!blocked.some(([a,b,c,d])=>x>a-.28&&x<b+.28&&z>c-.28&&z<d+.28)&&![-11.2,-5.6,0,5.6,11.2].some(cx=>[-5.8,0].some(cz=>Math.hypot(x-cx,z-cz)<.52));
+ const blocked=[[ -.4,1.9,2.5,3.7],[-13,-7.3,-8,-3.2],[-7.2,9.8,-3.7,-1.25],[-7,-2.1,2.1,4.1],[4.6,6.3,2.2,4.1],[7,9,2.5,4.5],[10.6,12.9,2.2,6.9],[-10.5,-5.3,5.65,7.6]];
+ const canWalk=(x,z)=>x>-12.7&&x<12.7&&z>-7.5&&z<7.85&&!blocked.some(([a,b,c,d])=>x>a-.18&&x<b+.18&&z>c-.18&&z<d+.18)&&![-11.2,-5.6,0,5.6,11.2].some(cx=>[-5.8,0].some(cz=>Math.hypot(x-cx,z-cz)<.52));
  function update(time,power,steam,dt,camera,showLabels=true){labels.forEach(o=>{const d=o.position.distanceTo(camera.position),scale=o.userData.labelScale,f=Math.min(1,d*.30/scale.x);o.visible=showLabels&&d<9;o.scale.copy(scale).multiplyScalar(f);});fan.rotation.z+=power*dt*8;mixers.forEach(r=>r.rotation.y+=power*dt*3);flowRotors.forEach(r=>r.rotation.z+=power*dt*4);equipment.panelStatusLights.forEach((l,i)=>{l.visible=power>.05||i%3===0;});particles.forEach((p,i)=>{const t=(time*.27+i/28)%1;p.position.set(-7.6+Math.sin(i*8+t*4)*t*.5,1.3+t*2.7,4.4-t*.35);p.scale.setScalar(.25+t*1.4);p.material.opacity=steam*Math.sin(t*Math.PI)*.23;});screenAge+=dt;if(screenAge<.2)return;screenAge=0;const g=screen.getContext('2d');g.fillStyle='#18232e';g.fillRect(0,0,512,256);g.fillStyle='#e7c477';g.font='24px monospace';g.fillText('MCC-01 / RESIN UNIT',24,42);g.font='38px monospace';g.fillText(power>.4?'PROCESS RUNNING':'STANDBY',24,105);g.font='20px monospace';g.fillText('CIRCULATION '+(power*12.8).toFixed(1)+' m3/h',24,165);g.fillText('EXTRACTION '+(power>.05?'ON':'OFF'),24,215);screenMap.needsUpdate=true;}
- const views={
-  entrance:{p:[9.95,1.75,7.65],t:[-5,2.2,-5],name:'B1 / WHOLE RESIN PLANT'},
-  pumps:{p:[-.8,1.75,.7],t:[-.8,2.2,-2.6],name:'PUMP GALLERY / P-201'},
-  reactor:{p:[2,1.75,.7],t:[-3.2,8,-5.4],name:'REACTION & RECOVERY / R-201'},
-  utilities:{p:[-8.8,1.75,5.4],t:[-7.5,2,4.3],name:'UTILITIES / EXTRACTION'}
- };
  // Batch fixed plant meshes while preserving moving assemblies and status lamps.
  equipment.panelStatusLights.forEach(o=>o.userData.noMerge=true);
  scene.updateMatrixWorld(true);const batches=new Map(),originals=[];
  scene.traverse(o=>{if(!o.isMesh||!o.visible||o.material.transparent||o.material.isMeshBasicMaterial)return;let p=o;while(p){if(!p.visible||p.userData.noMerge)return;p=p.parent;}const geo=o.geometry.clone().applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geo);originals.push(o);});
  originals.forEach(o=>o.parent.remove(o));for(const [m,geos] of batches){const merged=mergeGeometries(geos,false);if(merged){const o=new T.Mesh(merged,m);o.castShadow=o.receiveShadow=true;scene.add(o);}geos.forEach(g=>g.dispose());}
- return {door,canWalk,update,views};
+ return {door,canWalk,update};
 
 }
