@@ -18,14 +18,14 @@ $('labels').onclick=()=>{showLabels=!showLabels;$('labels').textContent=showLabe
 function pose(p,t){camera.position.set(...p);camera.lookAt(...t);}
 pose([9.95,4.72,18.1],[9.95,1.9,8.4]);
 function travel(points,done){transition={points,index:0,age:0,from:camera.position.clone(),fromQ:camera.quaternion.clone(),done};mode='transition';}
-function inside(){mode='inside';$('plant').hidden=false;$('plant').open=false;$('movement').hidden=false;$('return').hidden=false;pose([9.95,1.75,7.65],[-5,2.2,-5]);$('location').textContent='B1 / RESIN PROCESS GALLERY';$('hint').textContent='Drag to look · hold or tap arrows to walk · W A S D';}
+function inside(){mode='inside';$('plant').hidden=false;$('plant').open=false;$('return').hidden=false;pose([9.95,1.75,7.65],[-10,1.9,1.8]);$('location').textContent='B1 / RESIN PROCESS GALLERY';$('hint').textContent='Drag to look · W A S D to walk';}
 $('descend').onclick=()=>{$('entry').hidden=true;travel([{p:[9.95,1.75,10.4],t:[9.95,2,8.4],duration:4}],()=>{mode='door';$('keypad').hidden=false;$('pin').focus();$('location').textContent='THERMAL ACCESS DOOR / LOCKED';});};
 $('unlockForm').onsubmit=e=>{e.preventDefault();if($('pin').value!=='2048'){$('pinMessage').textContent='Incorrect PIN. Try 2048.';$('pin').value='';return;}unlocked=true;$('keypad').hidden=true;$('location').textContent='ACCESS GRANTED / ENTERING B1';travel([{p:[9.95,1.75,10.4],t:[9.95,2,8],duration:1.5},{p:[9.3,1.75,5.2],t:[3,2,1],duration:3},{p:[3,1.75,5.3],t:[-2,2,-2],duration:2}],inside);};
 function stop(){running=false;elapsed=0;steamTime=0;$('start').disabled=false;$('steam').disabled=true;$('stop').disabled=true;$('status').textContent='Stopping · circulation winding down';}
 $('start').onclick=()=>{running=true;elapsed=0;$('start').disabled=true;$('stop').disabled=false;};
 $('stop').onclick=stop;
 $('steam').onclick=()=>{if(running&&elapsed>6){steamTime=8;$('steam').disabled=true;}};
-$('return').onclick=()=>{stop();clearKeys();mode='stair';unlocked=false;transition=null;['plant','movement','return','keypad'].forEach(id=>$(id).hidden=true);$('entry').hidden=false;pose([9.95,4.72,18.1],[9.95,1.9,8.4]);$('pin').value='';$('pinMessage').textContent='Demo PIN: 2048';$('location').textContent='ACCESS STAIR / B1';$('hint').textContent='A closed industrial interior, explored at human scale.';};
+$('return').onclick=()=>{stop();clearKeys();mode='stair';unlocked=false;transition=null;['plant','return','keypad'].forEach(id=>$(id).hidden=true);$('entry').hidden=false;pose([9.95,4.72,18.1],[9.95,1.9,8.4]);$('pin').value='';$('pinMessage').textContent='Demo PIN: 2048';$('location').textContent='ACCESS STAIR / B1';$('hint').textContent='A closed industrial interior, explored at human scale.';};
 function clearKeys(){keys.clear();}
 $('help').onclick=()=>{clearKeys();$('helpDialog').showModal();};$('closeHelp').onclick=$('helpDone').onclick=()=>$('helpDialog').close();
 const keys=new Set();
