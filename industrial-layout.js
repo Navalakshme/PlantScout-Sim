@@ -12,25 +12,25 @@ export function buildIndustry(THREE, scene) {
 
   const standard = (color, roughness = 0.72, metalness = 0.12, extra = {}) =>
     new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
-  const steel = standard(0x77817e, 0.52, 0.58);
-  const steelDark = standard(0x273130, 0.7, 0.44);
-  const galvanized = standard(0x687471, 0.48, 0.63);
-  const concrete = standard(0x414946, 0.96, 0.01);
-  const concreteDark = standard(0x252d2b, 0.98, 0.01);
-  const floorMat = standard(0x343b39, 0.96, 0.02);
-  const bluePaint = standard(0x36565d, 0.62, 0.3);
-  const greenPaint = standard(0x3d594c, 0.62, 0.26);
+  const steel = standard(0x9a9b9e, 0.34, 0.8);
+  const steelDark = standard(0x292d34, 0.65, 0.5);
+  const galvanized = standard(0x7d8087, 0.44, 0.7);
+  const concrete = standard(0x817b72, 0.96, 0.01);
+  const concreteDark = standard(0x524d47, 0.98, 0.01);
+  const floorMat = standard(0x75716b, 0.84, 0.04);
+  const bluePaint = standard(0x354a61, 0.48, 0.4);
+  const greenPaint = standard(0x58606b, 0.48, 0.4);
   const safety = standard(0xb27b32, 0.6, 0.16);
   const resinPipe = standard(0x98704e, 0.48, 0.46);
-  const solventPipe = standard(0x9b9c7f, 0.48, 0.5);
-  const coolingPipe = standard(0x507f83, 0.48, 0.48);
-  const returnPipe = standard(0x6f927b, 0.48, 0.46);
+  const solventPipe = standard(0xa6a7a6, 0.38, 0.7);
+  const coolingPipe = standard(0x49718c, 0.48, 0.48);
+  const returnPipe = standard(0x82878c, 0.4, 0.65);
   const warmLightMat = new THREE.MeshBasicMaterial({ color: 0xffd28a, toneMapped: false });
   const greenLightMat = new THREE.MeshBasicMaterial({ color: 0x66d79b, toneMapped: false });
   const amberLightMat = new THREE.MeshBasicMaterial({ color: 0xffb64e, toneMapped: false });
   const redLightMat = new THREE.MeshBasicMaterial({ color: 0xe45c4b, toneMapped: false });
   const faceMat = standard(0xbab9a8, 0.9, 0.01);
-  const lensMat = standard(0x111717, 0.22, 0.18, { emissive: 0x16463b, emissiveIntensity: 0.38 });
+  const lensMat = standard(0x151c26, 0.22, 0.18, { emissive: 0x24394c, emissiveIntensity: 0.38 });
 
   function box(parent, x, y, z, sx, sy, sz, material, cast = true, receive = true) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), material);
@@ -159,7 +159,7 @@ export function buildIndustry(THREE, scene) {
   label('B1 · RESIN UNIT PUMP GALLERY', 0, 4.1, -8.0, 5.0, '#e4d5af');
   // Slab edge and structural grid show that process equipment continues above this level.
   for (const x of [-11.2, -5.6, 0, 5.6, 11.2]) {
-    for (const z of [-5.8, 0, 5.8]) {
+    for (const z of [-5.8, 0]) {
       box(scene, x, 2.28, z, 0.32, 4.56, 0.32, steelDark);
       box(scene, x, 0.16, z, 0.72, 0.24, 0.72, steel);
       box(scene, x, 4.45, z, 0.68, 0.2, 0.68, steel);
@@ -353,7 +353,7 @@ export function buildIndustry(THREE, scene) {
 
   // Upper process level: batch reactor, reflux equipment, blend/hold tank, xylene day tank.
   // Lower pump connections rise through the slab; upper vessels remain above the gallery.
-  const processSteel = standard(0x72817d, 0.34, 0.7);
+  const processSteel = standard(0x9c9fa4, 0.3, 0.85);
   function verticalVessel(x, z, baseY, radius, height, tag, sub, mixer = false, paint = processSteel) {
     const g = new THREE.Group();
     g.position.set(x, baseY, z);
@@ -491,10 +491,6 @@ export function buildIndustry(THREE, scene) {
     [-10.8, -1.0, 0xffd59b, 1.0], [-5.2, 1.2, 0xffc77d, 1.15], [0.2, 1.1, 0xe3e7d5, 1.0],
     [5.6, 1.2, 0xffd59b, 1.05], [10.2, -0.2, 0xffc77d, 1.0], [0.0, -6.9, 0xe3e7d5, 0.85],
   ]) cagedLight(x, 4.25, z, c, intensity);
-  label('PUMP BAY A', -2.8, 3.9, -7.5, 2.2, '#d7d8c8');
-  label('PROCESS / TRANSFER HEADER', 2.6, 4.23, -5.9, 3.6, '#dfcfaa');
-  label('PRODUCT FILTER & TRANSFER', 6.2, 3.65, 4.5, 3.1, '#d7d8c8');
-  label('LEVEL B1 · LOWER PROCESS GALLERY', 0.2, 0.95, 7.98, 3.8, '#e3d6b8');
 
-  return { facilityLights, processMotors, panelStatusLights, conveyorRollers, ceilingPanels };
+  return { facilityLights, processMotors, panelStatusLights, conveyorRollers, ceilingPanels, materials: {steel,steelDark,galvanized,concrete,concreteDark,floorMat,processSteel} };
 }
