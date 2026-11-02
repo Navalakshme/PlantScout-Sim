@@ -26,6 +26,17 @@ export function buildIndustry(T,scene){
  for(const dx of [-1.55,1.55]){pipe([x+dx,.65,-3],[x+dx,5.8,-3],.055);for(const y of [1.3,2.4,4]){flange(x+dx,y,-3);pipe([x+dx,y,-3],[x+dx,y,-2.7],.05);const wheel=new T.Mesh(new T.TorusGeometry(.11,.016,8,24),blue);wheel.position.set(x+dx,y,-2.65);scene.add(wheel);}}
  tag(['R-101 / RESIN REACTOR','R-102 / BLEND VESSEL','V-201 / HOLD TANK','V-202 / PRODUCT'][i],x,2.7,-3.42);
  }
+
+ // Supporting process line: feed, condensation, filtration, filling and utilities.
+ function unit(x,z,r,h,label){box(x,.3,z,r*2+.35,.3,r*2+.35,steelDark);pipe([x,.6,z],[x,h,z],r);for(const y of [.6,h])ring(x,y,z,r,.025);for(const dx of [-r*.7,r*.7])pipe([x+dx,.35,z],[x+dx,.8,z],.045);pipe([x,.85,z],[x,.85,z+.6],.045);flange(x,.85,z+.5,.1);tag(label,x,h+.35,z);}
+ function motor(x,z,label){box(x,.45,z,1.3,.2,.7,steelDark);pipe([x-.5,.8,z],[x+.2,.8,z],.18,blue);pipe([x+.2,.8,z],[x+.45,.8,z],.24);for(let i=0;i<10;i++)box(x-.45+i*.055,.8,z,.018,.4,.4,steelDark);pipe([x+.35,.8,z],[x+.35,1.3,z],.05);tag(label,x,1.6,z);}
+ unit(-11.9,-5,.44,2.4,'TK-01 / RESIN FEED');unit(-10.8,-6.8,.44,2.4,'TK-02 / SOLVENT FEED');motor(-11.4,-2.2,'P-01 / DOSING');pipe([-11.05,1.3,-2.2],[-11.05,3.3,-2.2],.05);pipe([-11.05,3.3,-2.2],[-8.7,3.3,-2.2],.05);pipe([-8.7,3.3,-2.2],[-8.7,3.3,-4.6],.05);
+ // Condenser and condensate receiver between the reactor and blend vessel.
+ pipe([-6,3.5,-6],[-6,3.5,-3.9],.34);for(const z of [-6,-5.8,-4.1,-3.9])flange(-6,3.5,z,.4);for(const z of [-5.7,-4.2])box(-6,2,z,.12,3,.12,galvanized);unit(-6,-5,.4,1.9,'V-103 / RECEIVER');tag('E-101 / CONDENSER',-6,4.1,-4);pipe([-8.7,5.1,-4.6],[-6,5.1,-4.6],.085);pipe([-6,5.1,-4.6],[-6,3.5,-4.6],.085);pipe([-6,3.15,-4],[-6,1.6,-4],.045);pipe([-6,1.6,-4],[-6,1.6,-5],.045);
+ // Duplex filter skid feeds the product transfer and closed filling station.
+ box(4.9,.35,-2.5,1.7,.25,1.3,steelDark);for(const x of [4.45,5.3]){unit(x,-2.5,.24,2.1,x<5?'F-301 / FILTER A':'F-302 / FILTER B');ring(x,2.1,-2.5,.28,.025);pipe([x,.85,-1.9],[x,1.1,-1.8],.045);}pipe([2.3,1.1,-1.8],[10.5,1.1,-1.8],.05);motor(10.5,-2.2,'P-401 / TRANSFER');unit(11.5,-5.4,.35,1.6,'PK-401 / DRUM FILLING');box(11.5,.45,-5.4,1.3,.12,1.3,galvanized);pipe([12.1,.5,-5.8],[12.1,2.5,-5.8],.05);pipe([12.1,2.5,-5.8],[11.5,2.5,-5.4],.045);pipe([11.5,2.5,-5.4],[11.5,1.65,-5.4],.045);
+ // Plate heat exchanger, instrument air receiver, and local drive cabinet.
+ box(-3.1,.4,6.8,2.2,.2,1.2,steelDark);for(let i=0;i<20;i++)box(-3.7+i*.055,1.35,6.8,.025,1.25,.6,steel);for(const x of [-3.8,-2.55])box(x,1.35,6.8,.1,1.5,.85,blue);for(const y of [.95,1.75]){pipe([-3.9,y,6.5],[-4.2,y,6.5],.065);pipe([-4.2,y,6.5],[-4.2,3.18,6.5],.065);}tag('HX-501 / COOLING LOOP',-3.1,2.4,6.8);unit(.2,7.1,.35,2.6,'AIR-501 / INSTRUMENT AIR');box(3.7,1.65,7.65,1.25,2.4,.45,galvanized);box(3.7,2.1,7.4,.65,.43,.035,steelDark);for(let i=0;i<3;i++)pipe([3.4+i*.3,1.5,7.38],[3.4+i*.3,1.5,7.33],.055,blue);tag('MCC-02 / PROCESS DRIVES',3.7,3.25,7.4);
  // Dense ceiling services with realistic small diameters and support spacing.
  for(let j=0;j<14;j++){const z=-7+j*.46,y=5.7+(j%3)*.16;pipe([-12.8,y,z],[12.8,y,z],j%4===0?.10:.035);for(const x of [-11,-6,-1,4,9]){box(x,y-.15,z,.04,.04,.28,steelDark);pipe([x,y,z],[x,6.5,z],.012,galvanized);}}
  for(const x of [-9,-3,3,9]){pipe([x,5.8,-6],[x,4.9,-6],.065);pipe([x,4.9,-6],[x,4.9,-4.6],.065);}
