@@ -64,11 +64,11 @@ export function buildInterior(scene){
  sign('POWER / LOCAL CONTROL',-9.9,3.3,-3.2,3.3);
  sign('UTILITY STEAM / DEMO VENT',-7.5,2.7,4.7,2.5,.32);
  // Enclosed control station visible immediately after entering.
- box(6.7,1.15,6.5,2.8,2.3,.7,dark);box(6.7,1.6,6.88,2.55,1.1,.05,metal);
+ box(12,1.15,6.5,2.6,2.3,.7,dark);box(12,1.6,6.88,2.4,1.1,.05,metal);
  const screen=document.createElement('canvas');screen.width=512;screen.height=256;const screenMap=new T.CanvasTexture(screen);screenMap.colorSpace=T.SRGBColorSpace;
- const display=new T.Mesh(new T.PlaneGeometry(1.6,.8),new T.MeshBasicMaterial({map:screenMap}));display.position.set(6.4,1.7,6.93);scene.add(display);
- for(let i=0;i<3;i++)box(7.45,1.95-i*.25,6.96,.12,.12,.08,new T.MeshBasicMaterial({color:[0xb5d5a0,0xcaa353,0xe6755b][i]}));
- sign('MCC-01 / PROCESS ENABLE',6.7,2.65,6.91,2.7,.3);
+ const display=new T.Mesh(new T.PlaneGeometry(1.6,.8),new T.MeshBasicMaterial({map:screenMap}));display.position.set(11.7,1.7,6.93);scene.add(display);
+ for(let i=0;i<3;i++)box(12.75,1.95-i*.25,6.96,.12,.12,.08,new T.MeshBasicMaterial({color:[0xb5d5a0,0xcaa353,0xe6755b][i]}));
+ sign('MCC-01 / PROCESS ENABLE',12,2.65,6.91,2.5,.3);
  // Ventilation fan rotor inside a stationary protective grille.
  const fan=new T.Group();fan.position.set(-10,3.2,7.88);fan.userData.noMerge=true;scene.add(fan);
  for(let i=0;i<6;i++){const blade=box(0,0,0,.16,1.35,.06,metal,fan);blade.rotation.z=i*Math.PI/3;}
@@ -80,7 +80,7 @@ export function buildInterior(scene){
  const particles=[];const puffCanvas=document.createElement('canvas');puffCanvas.width=puffCanvas.height=64;const pg=puffCanvas.getContext('2d'),grad=pg.createRadialGradient(32,32,0,32,32,32);grad.addColorStop(0,'#e4ebeac0');grad.addColorStop(1,'#e4ebea00');pg.fillStyle=grad;pg.fillRect(0,0,64,64);const puffTex=new T.CanvasTexture(puffCanvas);
  for(let i=0;i<28;i++){const p=new T.Sprite(new T.SpriteMaterial({map:puffTex,transparent:true,opacity:0,depthWrite:false}));scene.add(p);particles.push(p);}
  // Walking clearance keeps the visitor away from equipment bases and walls.
- const blocked=[[ -.4,1.9,2.5,3.7],[-13,-7.3,-8,-3.2],[-7.2,9.8,-3.7,-1.25],[-7,-2.1,2.1,4.1],[4.6,6.3,2.2,4.1],[7,9,2.5,4.5],[9.7,13,2.2,7.6],[5.2,8.2,6,7.2]];
+ const blocked=[[ -.4,1.9,2.5,3.7],[-13,-7.3,-8,-3.2],[-7.2,9.8,-3.7,-1.25],[-7,-2.1,2.1,4.1],[4.6,6.3,2.2,4.1],[7,9,2.5,4.5],[9.7,13,2.2,7.6],[10.7,13.3,5.8,7.4]];
  const canWalk=(x,z)=>x>-12.7&&x<12.7&&z>-7.5&&z<7.65&&!blocked.some(([a,b,c,d])=>x>a-.28&&x<b+.28&&z>c-.28&&z<d+.28)&&![-11.2,-5.6,0,5.6,11.2].some(cx=>[-5.8,0].some(cz=>Math.hypot(x-cx,z-cz)<.52));
  function update(time,power,steam,dt,camera,showLabels=true){labels.forEach(o=>{const d=o.position.distanceTo(camera.position),scale=o.userData.labelScale,f=Math.min(1,d*.30/scale.x);o.visible=showLabels&&d<9;o.scale.copy(scale).multiplyScalar(f);});fan.rotation.z+=power*dt*8;mixers.forEach(r=>r.rotation.y+=power*dt*3);flowRotors.forEach(r=>r.rotation.z+=power*dt*4);equipment.panelStatusLights.forEach((l,i)=>{l.visible=power>.05||i%3===0;});particles.forEach((p,i)=>{const t=(time*.27+i/28)%1;p.position.set(-7.6+Math.sin(i*8+t*4)*t*.5,1.3+t*2.7,4.4-t*.35);p.scale.setScalar(.25+t*1.4);p.material.opacity=steam*Math.sin(t*Math.PI)*.23;});screenAge+=dt;if(screenAge<.2)return;screenAge=0;const g=screen.getContext('2d');g.fillStyle='#18232e';g.fillRect(0,0,512,256);g.fillStyle='#e7c477';g.font='24px monospace';g.fillText('MCC-01 / RESIN UNIT',24,42);g.font='38px monospace';g.fillText(power>.4?'PROCESS RUNNING':'STANDBY',24,105);g.font='20px monospace';g.fillText('CIRCULATION '+(power*12.8).toFixed(1)+' m3/h',24,165);g.fillText('EXTRACTION '+(power>.05?'ON':'OFF'),24,215);screenMap.needsUpdate=true;}
  const views={
