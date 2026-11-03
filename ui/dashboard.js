@@ -238,8 +238,10 @@ export class DashboardController {
     if (isExplore) {
       this.renderEquipmentList();
       this.activeCameraView = 'walk';
+      document.querySelector('.view-btn[data-cam="walk"]')?.click();
     } else if (isInspection) {
       this.activeCameraView = 'follow';
+      document.querySelector('.view-btn[data-cam="follow"]')?.click();
     } else if (isReport) {
       // Scroll directly down to report
       this.$('report-section').scrollIntoView({ behavior: 'smooth' });
