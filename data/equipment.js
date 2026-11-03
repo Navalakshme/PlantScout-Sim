@@ -744,7 +744,7 @@ export const INSPECTION_STATIONS = [
   { id: 'STATION-14', name: 'Overhead Recovery: Condenser & Separator', position: [-5.0, -2.5], targetEq: 'V-201', lookAt: [-6.0, 3.1, -7.6], isSpillZone: false },
   { id: 'STATION-15', name: 'Overhead Recovery: Reaction Water Tank', position: [-3.8, -2.5], targetEq: 'TK-201', lookAt: [-4.0, 1.2, -7.2], isSpillZone: false },
   { id: 'STATION-16', name: 'Transfer & Blending: Blender BL-301', position: [1.0, -2.5], targetEq: 'BL-301', lookAt: [1.0, 2.0, -5.0], isSpillZone: false },
-  { id: 'STATION-17', name: 'Filtration Skid: Pump P-301 & Floor Spill Zone', position: [4.0, -2.5], targetEq: 'P-301', lookAt: [4.8, 0.1, -3.5], isSpillZone: true },
+  { id: 'STATION-17', name: 'Filtration Skid: Pump P-301 & Floor Spill Zone', position: [4.0, -2.5], targetEq: 'P-301', lookAt: [4.8, 0.03, -0.7], isSpillZone: true },
   { id: 'STATION-18', name: 'Filtration Skid: Polishing Filter F-301', position: [5.8, -2.5], targetEq: 'F-301', lookAt: [5.5, 1.3, -5.0], isSpillZone: false },
   { id: 'STATION-19', name: 'Storage & Packaging: TK-401 & Filling FL-401', position: [10.5, -2.5], targetEq: 'TK-401', lookAt: [10.5, 1.4, -4.5], isSpillZone: false },
   { id: 'STATION-20', name: 'Return to Robot Dock', position: [0.0, 7.8], targetEq: 'ROBOT-001', lookAt: [0.0, 0.6, 7.8], isSpillZone: false }
