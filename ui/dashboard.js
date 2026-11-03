@@ -4,6 +4,7 @@
 import { EQUIPMENT_REGISTER, INSPECTION_STATIONS } from '../data/equipment.js';
 import { CONNECTION_LINES, FLUID_SERVICES } from '../data/graph.js';
 import { PROCESS_STAGES } from '../sim/engine.js';
+import { galleryZ } from '../data/layout.js';
 
 export class DashboardController {
   constructor(engine, scenarioManager, rover, metaClient, camera, scene, ThreeInstance) {
@@ -73,13 +74,13 @@ export class DashboardController {
   }
 
   highlightSpillInScene() {
-    const spillPos = [4.8, 0.2, -3.2];
+    const spillPos = [4.8, 0.2, galleryZ(-3.2)];
     this.highlightBox.position.set(spillPos[0], spillPos[1], spillPos[2]);
     this.highlightBox.scale.set(2.2, 0.4, 1.6);
     this.highlightBox.visible = true;
 
     if (this.camera) {
-      this.flyCameraTo([4.8, 1.6, -1.8], [4.8, 0.05, -3.2]);
+      this.flyCameraTo([4.8, 1.6, galleryZ(-1.8)], [4.8, 0.05, galleryZ(-3.2)]);
     }
   }
 
