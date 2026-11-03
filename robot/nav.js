@@ -1,4 +1,5 @@
 // PlantScout - Robot Navigation & Floor Obstacle Map
+import { galleryZ } from '../data/layout.js';
 // Grid-based A* routing, collision clearances, and field-of-view line-of-sight verification.
 
 // 2D Obstacle bounding boxes [minX, maxX, minZ, maxZ] on the basement floor
@@ -30,6 +31,11 @@ export const FLOOR_OBSTACLES = [
   [-16.5, -1.2, 9.5, 10.5],   // South wall west
   [1.2, 16.5, 9.5, 10.5]      // South wall east (leaves X: -1.2 to 1.2 doorway open)
 ];
+
+for (const obstacle of FLOOR_OBSTACLES.slice(0, 13)) {
+  obstacle[2] = galleryZ(obstacle[2]);
+  obstacle[3] = galleryZ(obstacle[3]);
+}
 
 // Check if a point (x, z) is free of obstacles with a given clearance radius
 export function isFree(x, z, radius = 0.42) {
