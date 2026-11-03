@@ -1,6 +1,6 @@
 # PlantScout: Alkyd-Resin Process Basement Simulation & Robot Inspection
 
-PlantScout is an interactive industrial simulation of an enclosed alkyd-resin manufacturing basement. It combines a deterministic 12-stage process simulation, a 37-assembly equipment register, 3D piping, two seeded scenarios, an original mobile inspection robot (SCOUT-01), and structured audit reporting. The published Vercel site does not yet expose the Meta analysis endpoints.
+PlantScout is an interactive industrial simulation of an enclosed alkyd-resin manufacturing basement. It combines a deterministic 12-stage process simulation, a 37-assembly equipment register, 3D piping, two seeded scenarios, an original mobile inspection robot (SCOUT-01), Meta Muse Spark camera analysis when configured, and structured audit reporting.
 
 ---
 
@@ -127,21 +127,21 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
   - `Follow Robot`: Third-person chase camera trailing smoothly behind the rover.
   - `Masthead Camera`: Direct first-person RGB camera feed from the robot's masthead lens with HUD crosshairs and telemetry.
   - Manual driving via keyboard (`W A S D`, Arrow keys, Space for E-Stop) or interactive on-screen touch buttons.
-- **Autonomous Coverage Route (20 Stations)**:
-  - Starts at Dock (`Station 1`), visits all utility skids, electrical consoles, feed preparation tanks, reactor, overhead decanter, blender, filtration skid, floor spill zone (`Station 17`), finished product storage, drum filling, and returns to Dock (`Station 20`).
+- **Autonomous Coverage Route (38 Stops, 37 Assemblies)**:
+  - Starts at Dock, visits every registered assembly through collision-checked approaches including the floor spill zone at Station 17, then returns to Dock.
   - At each stop, the robot aligns toward the target equipment or floor zone, captures a high-resolution canvas screenshot from the masthead camera, checks telemetry against stage thresholds, checks line-of-sight visibility, and submits structured evidence to the inspection session.
 
 ---
 
 ## 7. Meta Model AI Integration & Server Architecture
 
-- **Backend**: Node.js HTTP server (`server.cjs`) running at `http://127.0.0.1:8765`.
+- **Backend**: Vercel Functions in `api/`, with `server.cjs` for a local preview at `http://127.0.0.1:8765`.
 - **API Endpoints**:
-  - `GET /api/status`: Queries model readiness and configuration state.
+  - `GET /api/status`: Reports whether `META_API_KEY` is configured; `?verify=1` authenticates with Meta's `/models` endpoint.
   - `POST /api/analyze-station`: Accepts evidence payloads (`{ inspectionId, stationId, equipmentIds, cameraImageBase64, telemetry, thresholds, evidenceId }`).
-  - `POST /api/synthesize-report`: Synthesizes final inspection audit conclusions.
-- **Current deployment status**: `server.cjs` is a local Node server; Vercel does not run it as an API Function. The live `/api/status` route returns 404, so the production `META_API_KEY` cannot be used by the inspection flow yet. The local server also targets the legacy Llama endpoint and needs migration to Meta Model API before live AI testing.
-- **Fallback limitation**: The current offline report uses simulated telemetry and a seeded spill flag. Some fallback wording incorrectly implies completed visual inspection and zero uncertainty. Treat those findings as demonstration output, not verified camera analysis.
+  - `POST /api/synthesize-report`: Returns a deterministic summary of submitted findings.
+- **Model**: `muse-spark-1.3` through `https://api.meta.ai/v1/chat/completions`. The server holds the key. Up to 10 selected masthead images per run are analyzed; all 38 stops still save a photo and simulated instrument readings.
+- **Evidence limits**: The report labels Meta camera findings, simulated telemetry checks, and scenario ground truth separately. A telemetry-only result does not claim that the photo was analyzed. A simulation spill flag is reported as ground truth if the image model does not confirm it.
 
 ---
 
@@ -156,7 +156,7 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
 - **Controls & movement**: Opens the movement guide after entry.
 - **Compact Telemetry Bar**: Live stage progress %, R-101 temp & level, BL-301 temp, P-301 bearing temp, F-301 filter DP, container mass, and simulated acid value.
 - **Inspection Audit Report**:
-  - Metadata cards: Inspection ID, Scenario, Timings, Route Coverage (20/20 Stations), and actual observed equipment (19/37 on the current route).
+  - Metadata cards: Inspection ID, Scenario, Timings, Route Coverage (38/38 Stops), and visited equipment (37/37 on a complete route).
   - Grounded conclusion banner with color coding.
   - Visual findings cards with camera frame thumbnails, measurement comparisons, confidence/uncertainty, and recommended follow-up.
   - **"Locate & Highlight in 3D"**: Clicking any finding smoothly flies the camera to the equipment or floor spill and draws a glowing bounding highlight box in the 3D scene!
@@ -178,7 +178,7 @@ Verification covers:
 - Separation of cooling water, thermal fluid, process streams, and containment drains.
 - Gravity elevation of condenser E-201 above separator V-201 above receiver TK-201.
 - Central inspection aisle (Z = -1.7 to +1.7m) completely unobstructed by obstacles.
-- A* collision-checked navigation routes across all 20 stations.
+- A* collision-checked navigation routes across all 38 stops.
 - Deterministic process permissives, mass conservation, and emergency shutdown isolation.
 - Normal vs Defective scenario seeding, spill mesh rendering, and alarm clearing.
 
@@ -208,4 +208,4 @@ Verification covers:
 1. **Educational Simulation**: This software is an illustrative conceptual simulation. It is not an engineered plant design, operating recipe, or evidence that a real solvent-processing basement is safe or compliant. Do not declare the real environment safe for human entry.
 2. **Simplified Chemistry & Kinetics**: The batch state machine uses simplified time-dependent thermal and analytical models (e.g. simulated acid value and viscosity) for demonstration purposes. It does not predict real non-linear polymerization kinetics or runaway industrial exothermic scenarios.
 3. **Kinematic Navigation**: Robot locomotion uses browser-based differential drive kinematics and a 2D floor obstacle map rather than full rigid-body physics engines (Webots / Gazebo) or real SLAM.
-4. **AI Inference Budget**: In live Meta API mode, image requests are capped at 25 requests per inspection run to prevent uncontrolled API quota usage.
+4. **AI Inference Budget**: In live Meta API mode, image requests are capped at 10 requests per inspection run. The model may miss subtle visual defects; the report exposes uncertainty and preserves the captured frame for review.

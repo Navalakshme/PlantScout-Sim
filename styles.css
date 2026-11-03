@@ -222,6 +222,17 @@ body.dark-theme {
 .entry-card label { display: block; margin: 14px 0 6px; font-weight: 700; }
 .entry-form { display: flex; gap: 8px; }
 .entry-form input { min-width: 0; flex: 1; padding: 12px; font-size: 18px; letter-spacing: .2em; background: #11191e; border: 1px solid #657985; color: white; border-radius: 4px; }
+.entry-card select { width: 100%; padding: 12px; background: #11191e; color: #edf4f5; border: 1px solid #657985; border-radius: 4px; }
+.scan-hud { position: absolute; z-index: 30; left: 16px; right: 16px; bottom: 18px; display: flex; align-items: center; gap: 14px; background: rgba(8,15,20,.9); border: 1px solid #4b7885; border-radius: 6px; padding: 12px 16px; color: #e8f2f3; }
+.scan-hud b { color: #83d6e6; font-family: var(--font-mono); }
+.scan-hud span { flex: 1; }
+.scan-hud.alarm { border-color: #e4544d; box-shadow: 0 0 25px #d2313199; }
+.scan-hud.alarm b { color: #ff7b76; }
+.scan-hud button { border: 1px solid #7c929b; background: #25343c; color: #fff; padding: 7px 10px; cursor: pointer; }
+body.inspection-active .topbar, body.inspection-active .sidebar, body.inspection-active .telemetry-bar, body.inspection-active .sub-panel, body.inspection-active .drawer-panel, body.inspection-active .inspection-report-section { display: none !important; }
+body.inspection-active .viewport-container { height: 100vh; width: 100vw; }
+body.inspection-active .main-content { width: 100vw; }
+body.inspection-active .scan-hud { display: flex; }
 .entry-card button { padding: 12px 17px; background: #477b91; color: white; border: 0; border-radius: 4px; font-weight: 700; cursor: pointer; }
 .entry-card button:hover { background: #5a98ae; }
 .entry-card small { color: #7f919b; }
@@ -993,7 +1004,17 @@ body.dark-theme {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
+    padding: 10px 12px;
+    gap: 8px;
   }
+  .sidebar-nav { flex-direction: row; overflow-x: auto; padding-bottom: 2px; }
+  .sidebar-nav .sidebar-label { display: none; }
+  .sidebar-nav .nav-btn { flex: 0 0 auto; min-width: 130px; white-space: nowrap; padding: 8px; }
+  .controls-link { width: auto; margin: 0; padding: 6px 9px; }
+  .sim-controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 5px; }
+  .sim-controls .sidebar-label { grid-column: 1 / -1; }
+  .sidebar-footer { display: none; }
+  .viewport-container { height: min(68vh, 610px); }
   .telem-metrics-grid {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1014,6 +1035,8 @@ body.dark-theme {
 }
 
 @media screen and (max-width: 640px) {
+  .sim-controls { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .scan-hud { flex-wrap: wrap; }
   .telem-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }

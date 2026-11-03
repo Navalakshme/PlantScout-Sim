@@ -29,11 +29,12 @@ camera.rotation.order = 'YXZ';
 camera.position.set(0.0, 1.75, 11.7); // Stop at the sealed vestibule door first
 
 const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
+renderer.domElement.tabIndex = 0;
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
 renderer.setSize(viewportElem.clientWidth, viewportElem.clientHeight);
 renderer.outputColorSpace = T.SRGBColorSpace;
 renderer.toneMapping = T.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.85;
+renderer.toneMappingExposure = 0.77;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 viewportElem.appendChild(renderer.domElement);
@@ -45,7 +46,7 @@ scene.environment = pmrem.fromScene(roomEnv, 0.04).texture;
 roomEnv.dispose();
 pmrem.dispose();
 
-const ambientLight = new T.HemisphereLight(0xdde3ea, 0x222830, 0.38);
+const ambientLight = new T.HemisphereLight(0xdde3ea, 0x222830, 0.28);
 scene.add(ambientLight);
 
 const mainSun = new T.DirectionalLight(0xf5eedc, 0.38);
@@ -74,18 +75,35 @@ scenarioMgr.updateSpillVisualization(scene, T);
 let dashboard = null;
 
 function captureCameraSnapshot() {
-  // Capture current canvas frame as base64 thumbnail
-  return renderer.domElement.toDataURL('image/jpeg', 0.85);
+  // Render from the mast lens, independently of the operator's selected view.
+  const oldPosition = camera.position.clone();
+  const oldQuaternion = camera.quaternion.clone();
+  const lens = new T.Vector3();
+  const direction = new T.Vector3(0, 0, -1);
+  rover.cameraHead.getWorldPosition(lens);
+  rover.cameraHead.getWorldQuaternion(oldFrameQuaternion);
+  direction.applyQuaternion(oldFrameQuaternion);
+  camera.position.copy(lens).addScaledVector(direction, 0.16);
+  camera.lookAt(camera.position.clone().add(direction));
+  renderer.render(scene, camera);
+  const frame = renderer.domElement.toDataURL('image/jpeg', 0.8);
+  camera.position.copy(oldPosition);
+  camera.quaternion.copy(oldQuaternion);
+  return frame;
 }
 
+const oldFrameQuaternion = new T.Quaternion();
+
 const rover = createRover(T, scene, (station, stationIndex) => {
-  // On Station Stop: capture frame & submit to dashboard inspection session
-  setTimeout(() => {
+  return new Promise((resolve, reject) => setTimeout(async () => {
+    try {
     const frame = captureCameraSnapshot();
     if (dashboard) {
-      dashboard.handleStationObservation(station, stationIndex, frame);
+      await dashboard.handleStationObservation(station, stationIndex, frame);
     }
-  }, 350); // Small delay to let masthead camera settle on target
+    resolve();
+    } catch (error) { reject(error); }
+  }, 350));
 });
 
 // --- 5. Meta AI Client & Dashboard Controller ---
@@ -139,6 +157,9 @@ function enterBasement() {
     return;
   }
   entryOpen = true;
+  const selectedBasement = document.getElementById('entry-basement').value;
+  dashboard.setScenario(selectedBasement);
+  document.getElementById('scenario-select').value = selectedBasement;
   equipment.equipmentMap.get('DOOR-001').rotation.y = Math.PI / 2;
   entryOverlay.classList.add('hidden');
   camera.position.set(0, 1.75, 8.9);
@@ -150,6 +171,35 @@ entryPin.addEventListener('keydown', event => {
   if (event.key === 'Enter') enterBasement();
 });
 entryPin.focus();
+const machineAudio = new AudioContext();
+const machineOscillator = machineAudio.createOscillator();
+const machineGain = machineAudio.createGain();
+machineOscillator.type = 'sawtooth';
+machineOscillator.frequency.value = 58;
+machineGain.gain.value = 0;
+machineOscillator.connect(machineGain).connect(machineAudio.destination);
+machineOscillator.start();
+document.getElementById('btn-start-system').addEventListener('click', () => {
+  machineAudio.resume();
+  machineGain.gain.setTargetAtTime(0.012, machineAudio.currentTime, 0.5);
+  engine.isPaused = false;
+  engine.isAutoAdvancing = true;
+  if (engine.stageIndex === 0) engine.nextStage();
+  dashboard.updateTopBar();
+  document.getElementById('btn-start-system').textContent = '● Resin system running';
+  document.getElementById('btn-auto-advance').textContent = 'Auto-Advancing: ON';
+});
+document.getElementById('scan-exit').addEventListener('click', () => {
+  document.body.classList.remove('inspection-active');
+  document.getElementById('scan-hud').classList.add('hidden');
+  if (document.fullscreenElement) document.exitFullscreen();
+});
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    document.body.classList.remove('inspection-active');
+    document.getElementById('scan-hud').classList.add('hidden');
+  }
+});
 let isDragging = false;
 let previousPointer = { x: 0, y: 0 };
 let walkPitch = 0;
@@ -157,7 +207,9 @@ let walkYaw = 0;
 
 window.addEventListener('keydown', e => {
   if (!entryOpen || !controlsOverlay.classList.contains('hidden')) return;
+  if (/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName || '')) return;
   const k = e.key.toLowerCase();
+  if (k.startsWith('arrow') || k === ' ') e.preventDefault();
   keys.add(k);
   if (k === ' ') {
     rover.emergencyStop();
@@ -169,13 +221,14 @@ window.addEventListener('keyup', e => {
 });
 
 renderer.domElement.addEventListener('pointerdown', e => {
+  if (!entryOpen) return;
   isDragging = true;
   previousPointer = { x: e.clientX, y: e.clientY };
+  dragStart = { x: e.clientX, y: e.clientY };
   renderer.domElement.setPointerCapture(e.pointerId);
-
-  // Check raycasting for clicking on equipment
-  handleEquipmentRaycast(e);
 });
+
+let dragStart = { x: 0, y: 0 };
 
 renderer.domElement.addEventListener('pointermove', e => {
   if (!isDragging) return;
@@ -198,8 +251,16 @@ renderer.domElement.addEventListener('pointermove', e => {
 });
 
 renderer.domElement.addEventListener('pointerup', e => {
+  if (Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) < 5) handleEquipmentRaycast(e);
   isDragging = false;
 });
+renderer.domElement.addEventListener('pointercancel', () => { isDragging = false; });
+renderer.domElement.addEventListener('wheel', e => {
+  if (!entryOpen) return;
+  e.preventDefault();
+  camera.fov = T.MathUtils.clamp(camera.fov + e.deltaY * 0.025, 38, 90);
+  camera.updateProjectionMatrix();
+}, { passive: false });
 
 // Equipment Click Raycasting
 const raycaster = new T.Raycaster();
@@ -223,6 +284,7 @@ function handleEquipmentRaycast(e) {
       obj = obj.parent;
     }
   }
+  dashboard.closeEquipmentDetails();
 }
 
 // Mobile/Touch Driving Buttons

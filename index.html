@@ -73,6 +73,7 @@
 
       <div class="sidebar-section sim-controls">
         <div class="sidebar-label">PROCESS ENGINE (FATTY-ACID ROUTE)</div>
+        <button id="btn-start-system" class="btn-primary" type="button">▶ Start resin system</button>
         <div class="btn-group">
           <button id="btn-prev-stage" class="btn-sm" title="Previous Stage">&larr; Prev</button>
           <button id="btn-next-stage" class="btn-sm" title="Next Stage">Next &rarr;</button>
@@ -92,6 +93,7 @@
       <!-- 3D WebGL Viewport Container -->
       <div class="viewport-container">
         <div id="viewport" aria-label="Interactive 3D Basement Viewport"></div>
+        <div id="scan-hud" class="scan-hud hidden" role="status" aria-live="polite"><b id="scan-title">SCOUT-01</b><span id="scan-detail">Preparing inspection</span><button id="scan-exit" type="button">Exit inspection view</button></div>
 
         <!-- Overlaid View Controls -->
         <div class="viewport-overlay top-left">
@@ -215,12 +217,12 @@
             Route Speed:
             <select id="inspection-speed-select" class="sidebar-select">
               <option value="1">1&times; (Demonstration)</option>
-              <option value="2.5" selected>2.5&times; (Standard)</option>
+              <option value="2.5">2.5&times; (Standard)</option>
               <option value="5">5&times; (Fast)</option>
             </select>
           </label>
         </div>
-        <p class="micro">Robot SCOUT-01 will travel along collision-checked central and maintenance aisles, stopping at 19 stations to capture camera frames, inspect floor zones for suspected spills, and query instrument telemetry.</p>
+        <p class="micro">Start the resin system first. Inspection holds the filtration stage for a repeatable equipment check. SCOUT-01 visits all 37 assemblies, records masthead photos, compares simulated instruments with thresholds, and sends selected frames to Meta Muse Spark (maximum 10 calls per run).</p>
       </div>
 
       <!-- Process Flow Diagram Panel (PFD mode) -->
@@ -276,7 +278,7 @@
           </div>
           <div class="meta-card">
             <span class="meta-label">Route Coverage</span>
-            <b id="rep-coverage-stat">0/19 Stations (0%)</b>
+            <b id="rep-coverage-stat">0/38 Stations (0%)</b>
           </div>
           <div class="meta-card">
             <span class="meta-label">Observed Equipment</span>
@@ -299,7 +301,7 @@
 
         <!-- Equipment Coverage Breakdown Table -->
         <div class="report-subsection">
-          <h3>Equipment Coverage Verification (All 37 Assemblies)</h3>
+        <h3>Equipment Visit Log (All 37 Assemblies)</h3>
           <div class="table-wrapper">
             <table class="report-table">
               <thead>
@@ -327,6 +329,8 @@
       <span class="entry-kicker">PLANTSCOUT • BASEMENT B1</span>
       <h2 id="entry-title">Personnel entrance</h2>
       <p>The process hall is behind the sealed access door. Enter the demonstration PIN to open it.</p>
+      <label for="entry-basement">Choose a basement</label>
+      <select id="entry-basement"><option value="normal">Descend to Basement 1 — normal operation</option><option value="defective">Descend to Basement 2 — defects to inspect</option></select>
       <label for="entry-pin">Access PIN</label>
       <div class="entry-form"><input id="entry-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4-digit PIN"><button id="entry-submit" type="button">Unlock &amp; enter</button></div>
       <p id="entry-error" class="entry-error" aria-live="polite"></p>
