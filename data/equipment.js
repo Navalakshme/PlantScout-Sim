@@ -1,5 +1,6 @@
 // PlantScout - Equipment Register
 import { galleryZ } from './layout.js';
+import { isFree, planPath } from '../robot/nav.js';
 // Exact 37 assemblies for solvent-assisted batch alkyd-resin manufacture (fatty-acid route).
 
 export const EQUIPMENT_REGISTER = [
@@ -763,4 +764,30 @@ for (const station of INSPECTION_STATIONS) {
   if (station.targetEq === 'ROBOT-001') continue;
   station.position[1] = galleryZ(station.position[1]);
   station.lookAt[2] = galleryZ(station.lookAt[2]);
+}
+
+// Extend the programmed route to every registered assembly. Each new stop is
+// chosen from collision-free reachable viewpoints, not from a visual shortcut.
+const routeTargets = new Set(INSPECTION_STATIONS.map(station => station.targetEq));
+let previousStop = INSPECTION_STATIONS[INSPECTION_STATIONS.length - 2].position;
+for (const eq of EQUIPMENT_REGISTER) {
+  if (routeTargets.has(eq.id)) continue;
+  const preferred = eq.viewpoint || [eq.position[0], eq.position[2] + 1.5];
+  let chosen = null;
+  for (let radius = 0; radius <= 4 && !chosen; radius += 0.5) {
+    for (let step = 0; step < 16; step++) {
+      const angle = step * Math.PI / 8;
+      const position = [preferred[0] + radius * Math.cos(angle), preferred[1] + radius * Math.sin(angle)];
+      if (isFree(position[0], position[1], 0.42) && planPath(previousStop, position, 0.42)) {
+        chosen = position;
+        break;
+      }
+    }
+  }
+  if (!chosen) continue;
+  INSPECTION_STATIONS.splice(-1, 0, {
+    id: `STATION-${eq.id}`, name: `${eq.id} ${eq.name}`, position: chosen,
+    targetEq: eq.id, lookAt: eq.target || eq.position, isSpillZone: false
+  });
+  previousStop = chosen;
 }
