@@ -6,6 +6,7 @@ import { CONNECTION_LINES, FLUID_SERVICES } from './data/graph.js';
 import { isFree, isSegmentClear, planPath, FLOOR_OBSTACLES } from './robot/nav.js';
 import { ProcessSimulationEngine, PROCESS_STAGES } from './sim/engine.js';
 import { SCENARIOS, ScenarioManager } from './sim/scenario.js';
+import { galleryZ } from './data/layout.js';
 
 console.log('=== Starting PlantScout End-to-End Verification ===\n');
 
@@ -73,27 +74,27 @@ assert(v201.position[1] > tk201.position[1], `Phase separator V-201 (Y=${v201.po
 
 // --- Test Group 3: Physical Hall Clearance & Aisle Unobstructed ---
 console.log('\n--- 3. Physical Hall & Inspection Aisle Clearance ---');
-// Central inspection aisle around Z = 0, ~3.4m wide (between Z = -1.7 and Z = +1.7)
+// Continuous central route remains clear after narrowing the gallery.
 let aisleBlocked = false;
 for (let x = -13.0; x <= 13.0; x += 1.0) {
-  for (let z = -1.5; z <= 1.5; z += 0.5) {
+  for (let z = -0.75; z <= 0.75; z += 0.25) {
     if (!isFree(x, z, 0.40)) {
       aisleBlocked = true;
       console.error(`Obstacle detected in central aisle at (${x}, ${z})`);
     }
   }
 }
-assert(!aisleBlocked, 'Continuous central inspection aisle (Z = -1.7 to +1.7, X = -13 to +13) is completely unobstructed');
+assert(!aisleBlocked, 'Continuous central inspection aisle (Z = -0.75 to +0.75, X = -13 to +13) is completely unobstructed');
 
 // Verify robot dock at [0, 7.8] is clear
 assert(isFree(0.0, 7.8, 0.42), 'Robot charging dock position [0.0, 7.8] is in collision-free space');
 
 // Test A* path from dock to multiple key stations
 const testStations = [
-  [-6.0, -2.5], // R-101
-  [4.0, -2.5],  // P-301
-  [12.0, 1.8],  // S-901
-  [-12.0, 3.5]  // P-501
+  INSPECTION_STATIONS[12].position, // R-101
+  INSPECTION_STATIONS[16].position, // P-301
+  INSPECTION_STATIONS[7].position,  // S-901
+  INSPECTION_STATIONS[4].position   // P-501
 ];
 testStations.forEach((target, i) => {
   const path = planPath([0.0, 7.8], target, 0.40);
@@ -101,9 +102,9 @@ testStations.forEach((target, i) => {
 });
 
 // Obstacle collision rejection
-assert(!isFree(-6.0, -5.0, 0.42), 'Reactor R-101 correctly registers as physical obstacle');
-assert(!isFree(5.5, -5.0, 0.42), 'Filter skid F-301 correctly registers as physical obstacle');
-assert(!isFree(-12.0, 5.5, 0.42), 'CW Pump P-501 correctly registers as physical obstacle');
+assert(!isFree(-6.0, galleryZ(-5.0), 0.42), 'Reactor R-101 correctly registers as physical obstacle');
+assert(!isFree(5.5, galleryZ(-5.0), 0.42), 'Filter skid F-301 correctly registers as physical obstacle');
+assert(!isFree(-12.0, galleryZ(5.5), 0.42), 'CW Pump P-501 correctly registers as physical obstacle');
 
 // --- Test Group 4: Deterministic Process Simulation Engine ---
 console.log('\n--- 4. Deterministic Process Simulation Permissives & Dynamics ---');

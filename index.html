@@ -69,6 +69,8 @@
         </button>
       </nav>
 
+      <button id="btn-controls" class="nav-btn controls-link" type="button">⌨ Controls &amp; movement</button>
+
       <div class="sidebar-section sim-controls">
         <div class="sidebar-label">PROCESS ENGINE (FATTY-ACID ROUTE)</div>
         <div class="btn-group">
@@ -318,6 +320,28 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <div id="entry-overlay" class="entry-overlay" role="dialog" aria-modal="true" aria-labelledby="entry-title">
+    <div class="entry-card">
+      <span class="entry-kicker">PLANTSCOUT • BASEMENT B1</span>
+      <h2 id="entry-title">Personnel entrance</h2>
+      <p>The process hall is behind the sealed access door. Enter the demonstration PIN to open it.</p>
+      <label for="entry-pin">Access PIN</label>
+      <div class="entry-form"><input id="entry-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4-digit PIN"><button id="entry-submit" type="button">Unlock &amp; enter</button></div>
+      <p id="entry-error" class="entry-error" aria-live="polite"></p>
+      <small>Demo PIN: 2048</small>
+    </div>
+  </div>
+
+  <div id="controls-overlay" class="entry-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="controls-title">
+    <div class="entry-card controls-card">
+      <span class="entry-kicker">INSIDE THE PROCESS HALL</span>
+      <h2 id="controls-title">Move through the basement</h2>
+      <p>You are standing just inside the entrance. Movement begins when you close this guide.</p>
+      <div class="control-list"><b>Walk</b><span>W A S D or arrow keys</span><b>Look around</b><span>Drag in the 3D scene</span><b>Inspect equipment</b><span>Click a machine or its label</span><b>Robot</b><span>Choose Start inspection, then Follow Robot or Masthead Camera. Use W/S to drive, A/D to steer, Space to stop.</span></div>
+      <button id="controls-close" type="button">Begin exploring</button>
+    </div>
   </div>
 
   <script type="importmap">

@@ -26,14 +26,14 @@ scene.fog = new T.FogExp2(0x13171a, 0.012);
 
 const camera = new T.PerspectiveCamera(70, viewportElem.clientWidth / viewportElem.clientHeight, 0.1, 100);
 camera.rotation.order = 'YXZ';
-camera.position.set(0.0, 1.75, 4.5); // Initial operator eye position in south walkway
+camera.position.set(0.0, 1.75, 11.7); // Stop at the sealed vestibule door first
 
 const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
 renderer.setSize(viewportElem.clientWidth, viewportElem.clientHeight);
 renderer.outputColorSpace = T.SRGBColorSpace;
 renderer.toneMapping = T.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMappingExposure = 0.85;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
 viewportElem.appendChild(renderer.domElement);
@@ -45,10 +45,10 @@ scene.environment = pmrem.fromScene(roomEnv, 0.04).texture;
 roomEnv.dispose();
 pmrem.dispose();
 
-const ambientLight = new T.HemisphereLight(0xdde3ea, 0x222830, 0.6);
+const ambientLight = new T.HemisphereLight(0xdde3ea, 0x222830, 0.38);
 scene.add(ambientLight);
 
-const mainSun = new T.DirectionalLight(0xf5eedc, 0.65);
+const mainSun = new T.DirectionalLight(0xf5eedc, 0.38);
 mainSun.position.set(2, 9, 3);
 mainSun.target.position.set(0, 0, 0);
 mainSun.castShadow = true;
@@ -118,12 +118,45 @@ if (urlParams.get('auto_report') === '1') {
 // --- 6. Camera Views & User Controls ---
 let activeCamView = 'walk'; // 'walk' | 'follow' | 'camera'
 const keys = new Set();
+let entryOpen = false;
+const entryOverlay = document.getElementById('entry-overlay');
+const controlsOverlay = document.getElementById('controls-overlay');
+const entryPin = document.getElementById('entry-pin');
+function showControls() {
+  if (!entryOpen) return;
+  controlsOverlay.classList.remove('hidden');
+  document.getElementById('controls-close').focus();
+}
+document.getElementById('btn-controls').addEventListener('click', showControls);
+document.getElementById('controls-close').addEventListener('click', () => {
+  controlsOverlay.classList.add('hidden');
+  renderer.domElement.focus();
+});
+function enterBasement() {
+  if (entryPin.value !== '2048') {
+    document.getElementById('entry-error').textContent = 'Incorrect demonstration PIN.';
+    entryPin.focus();
+    return;
+  }
+  entryOpen = true;
+  equipment.equipmentMap.get('DOOR-001').rotation.y = Math.PI / 2;
+  entryOverlay.classList.add('hidden');
+  camera.position.set(0, 1.75, 8.9);
+  camera.rotation.set(0, 0, 0);
+  showControls();
+}
+document.getElementById('entry-submit').addEventListener('click', enterBasement);
+entryPin.addEventListener('keydown', event => {
+  if (event.key === 'Enter') enterBasement();
+});
+entryPin.focus();
 let isDragging = false;
 let previousPointer = { x: 0, y: 0 };
 let walkPitch = 0;
 let walkYaw = 0;
 
 window.addEventListener('keydown', e => {
+  if (!entryOpen || !controlsOverlay.classList.contains('hidden')) return;
   const k = e.key.toLowerCase();
   keys.add(k);
   if (k === ' ') {
@@ -223,6 +256,7 @@ document.querySelectorAll('.view-btn').forEach(btn => {
 
 // Walking in Walk Mode
 function updateWalkMotion(dt) {
+  if (!entryOpen || !controlsOverlay.classList.contains('hidden')) return;
   if (activeCamView !== 'walk') return;
 
   let moveForward = 0;
@@ -255,6 +289,7 @@ function updateWalkMotion(dt) {
 
 // Manual Driving in Follow / Camera View
 function updateManualDriving(dt) {
+  if (!entryOpen || !controlsOverlay.classList.contains('hidden')) return;
   if (activeCamView === 'walk') return;
 
   let throttle = 0;

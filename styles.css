@@ -213,6 +213,24 @@ body.dark-theme {
   color: var(--text-main);
 }
 
+.controls-link { width: calc(100% - 32px); margin: 4px 16px 14px; border: 1px solid var(--border-color); }
+.entry-overlay { position: fixed; inset: 0; z-index: 500; display: grid; place-items: center; padding: 24px; background: rgba(5, 10, 14, .48); backdrop-filter: blur(2px); }
+.entry-card { width: min(100%, 490px); padding: 30px; background: #1b2228; border: 1px solid #6d7b84; border-radius: 8px; box-shadow: 0 26px 70px #0009; color: #ecf2f4; }
+.entry-kicker { color: #78b8c5; font: 700 11px var(--font-mono); letter-spacing: .14em; }
+.entry-card h2 { margin: 10px 0; font-size: 25px; }
+.entry-card p { color: #afbdc5; margin: 8px 0 18px; }
+.entry-card label { display: block; margin: 14px 0 6px; font-weight: 700; }
+.entry-form { display: flex; gap: 8px; }
+.entry-form input { min-width: 0; flex: 1; padding: 12px; font-size: 18px; letter-spacing: .2em; background: #11191e; border: 1px solid #657985; color: white; border-radius: 4px; }
+.entry-card button { padding: 12px 17px; background: #477b91; color: white; border: 0; border-radius: 4px; font-weight: 700; cursor: pointer; }
+.entry-card button:hover { background: #5a98ae; }
+.entry-card small { color: #7f919b; }
+.entry-card .entry-error { min-height: 18px; color: #ff8c84; margin: 7px 0; }
+.control-list { display: grid; grid-template-columns: 120px 1fr; gap: 10px 14px; margin: 22px 0; line-height: 1.45; }
+.control-list b { color: #8dd3dd; }
+.control-list span { color: #d2dce0; }
+@media (max-width: 530px) { .entry-form { flex-direction: column; } .control-list { grid-template-columns: 1fr; gap: 3px; } }
+
 .nav-btn.active {
   background-color: var(--primary);
   color: #fff;
