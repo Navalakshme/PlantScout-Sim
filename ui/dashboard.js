@@ -79,13 +79,13 @@ export class DashboardController {
   }
 
   highlightSpillInScene() {
-    const spillPos = [4.8, 0.2, galleryZ(-3.2)];
+    const spillPos = [4.8, 0.2, galleryZ(-0.7)];
     this.highlightBox.position.set(spillPos[0], spillPos[1], spillPos[2]);
     this.highlightBox.scale.set(2.2, 0.4, 1.6);
     this.highlightBox.visible = true;
 
     if (this.camera) {
-      this.flyCameraTo([4.8, 1.6, galleryZ(-1.8)], [4.8, 0.05, galleryZ(-3.2)]);
+      this.flyCameraTo([4.8, 1.6, galleryZ(0.8)], [4.8, 0.05, galleryZ(-0.7)]);
     }
   }
 
