@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {equipment,stations} from './equipment.mjs?v=20261103r1';
 import {free,planPath,obstacles} from './navigation.mjs?v=20261103r1';
-import {createRover,robotParts} from './rover.js?v=20261103r1';
+import {createRover,robotParts} from './rover.js?v=20261103r2';
 import {restoreMachinery} from './restored-machinery.js?v=20261103r1';
 export function installExperience(scene,camera,canvas){
  const $=id=>document.getElementById(id),detail=restoreMachinery(scene);

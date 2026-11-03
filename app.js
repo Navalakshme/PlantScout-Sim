@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {installExperience} from './experience.js?v=20261103r2';
+import {installExperience} from './experience.js?v=20261103r3';
 import {buildInterior} from './interior.js?v=20261103r1';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 const $=id=>document.getElementById(id);
