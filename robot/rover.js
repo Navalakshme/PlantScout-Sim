@@ -107,7 +107,7 @@ export function createRover(T, scene, onStationStop) {
   const lensMesh = cylinder(cameraHead, 0, 0, -0.06, 0.05, 0.05, 0.08, materials.lens, Math.PI / 2);
 
   // Strobe beacon & E-stop switch on rear deck
-  cylinder(root, -0.18, 0.58, 0.25, 0.04, 0.04, 0.08, materials.yellow);
+  const warningBeacon = cylinder(root, -0.18, 0.58, 0.25, 0.04, 0.04, 0.08, materials.yellow);
   cylinder(root, 0.18, 0.58, 0.25, 0.045, 0.045, 0.06, materials.red);
 
   // Route visualisation line
@@ -122,6 +122,9 @@ export function createRover(T, scene, onStationStop) {
   let isPaused = false;
   let isEstop = false;
   let dwellTimer = 0;
+  let inspectionPending = false;
+  let alertActive = false;
+  let beaconTime = 0;
   let panAngle = 0;
   let tiltAngle = 0;
   let driveSpeed = 0;
@@ -169,10 +172,16 @@ export function createRover(T, scene, onStationStop) {
     set speedMultiplier(val) { speedMultiplier = val; },
     get lidarRays() { return lidarRays; },
     get routeLog() { return routeLog; },
+    setAlert(active) {
+      alertActive = active;
+      warningBeacon.material = active ? materials.red : materials.yellow;
+      warningBeacon.scale.setScalar(active ? 1.8 : 1);
+    },
 
     startAutomaticInspection() {
       if (isEstop) return false;
       stationIndex = 0;
+      this.setAlert(false);
       routeLog.length = 0;
       isPaused = false;
       dwellTimer = 0;
@@ -223,6 +232,7 @@ export function createRover(T, scene, onStationStop) {
       root.rotation.y = 0;
       cameraHead.rotation.set(0, 0, 0);
       stationIndex = 0;
+      this.setAlert(false);
       dwellTimer = 0;
       state = 'Docked';
     },
@@ -262,6 +272,9 @@ export function createRover(T, scene, onStationStop) {
     },
 
     update(dt) {
+      beaconTime += dt;
+      if (alertActive) warningBeacon.visible = Math.sin(beaconTime * 9) > -0.1;
+      else warningBeacon.visible = true;
       // Rotate 2D LiDAR scanner
       lidarRotor.rotation.y += dt * 18.0;
 
@@ -315,7 +328,7 @@ export function createRover(T, scene, onStationStop) {
         isMoving = false;
         driveSpeed = 0;
         state = 'Station Dwell / Observing';
-        dwellTimer = 2.2; // Stay at station to aim camera & gather evidence
+        dwellTimer = 4.0 / speedMultiplier; // 4 seconds at the normal inspection speed
 
         const currentStation = INSPECTION_STATIONS[stationIndex];
 
@@ -332,11 +345,14 @@ export function createRover(T, scene, onStationStop) {
 
         // Trigger station inspection callback (captures frame, checks telemetry, triggers Meta analysis)
         if (onStationStop) {
-          onStationStop(currentStation, stationIndex);
+          inspectionPending = true;
+          Promise.resolve(onStationStop(currentStation, stationIndex))
+            .catch(error => console.warn('Station inspection failed', error))
+            .finally(() => { inspectionPending = false; });
         }
-      } else if (!isMoving && dwellTimer > 0) {
-        dwellTimer -= dt * speedMultiplier;
-        if (dwellTimer <= 0) {
+      } else if (!isMoving && state === 'Station Dwell / Observing') {
+        dwellTimer = Math.max(0, dwellTimer - dt);
+        if (dwellTimer <= 0 && !inspectionPending) {
           // Advance to next station
           stationIndex++;
           if (stationIndex < INSPECTION_STATIONS.length) {
