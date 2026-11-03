@@ -315,6 +315,7 @@ document.querySelectorAll('.view-btn').forEach(btn => {
     }
   });
 });
+if (dashboard.activeView === 'inspection') document.querySelector('.view-btn[data-cam="follow"]').click();
 
 // Walking in Walk Mode
 function updateWalkMotion(dt) {
