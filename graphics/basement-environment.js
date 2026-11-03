@@ -1,10 +1,11 @@
 // PlantScout - Enclosed Industrial Basement Environment
+import { galleryZ } from '../data/layout.js';
 // Dimensions: 32m long (X: -16 to +16), 20m wide (Z: -10 to +10), 7.5m clear height (Y: 0 to 7.5).
 // Central inspection aisle around Z = 0, ~3.4m wide. Floor Y = 0.
 
 export function buildBasementEnvironment(T, scene) {
   const materials = {
-    floor: new T.MeshStandardMaterial({ color: 0x828587, roughness: 0.58, metalness: 0.12 }),
+    floor: new T.MeshStandardMaterial({ color: 0x5d6367, roughness: 0.65, metalness: 0.08 }),
     curb: new T.MeshStandardMaterial({ color: 0x5a5e61, roughness: 0.72, metalness: 0.08 }),
     wall: new T.MeshStandardMaterial({ color: 0x484b4d, roughness: 0.85, metalness: 0.05 }),
     ceiling: new T.MeshStandardMaterial({ color: 0x3d4042, roughness: 0.90, metalness: 0.05 }),
@@ -53,6 +54,18 @@ export function buildBasementEnvironment(T, scene) {
   box(-9.0, 3.75, 10.1, 14.0, 7.5, 0.2, materials.wall);
   box(9.0, 3.75, 10.1, 14.0, 7.5, 0.2, materials.wall);
   box(0, 5.75, 10.1, 4.0, 3.5, 0.2, materials.wall); // Above doorway
+  box(-1.5, 1.3, 10.1, 1.0, 2.6, 0.2, materials.wall);
+  box(1.5, 1.3, 10.1, 1.0, 2.6, 0.2, materials.wall);
+
+  // Short, enclosed access vestibule outside the sealed hall door.
+  box(0, -0.12, 11.25, 4.2, 0.24, 2.7, materials.floor);
+  box(-2.05, 1.55, 11.25, 0.22, 3.1, 2.7, materials.wall);
+  box(2.05, 1.55, 11.25, 0.22, 3.1, 2.7, materials.wall);
+  box(0, 3.12, 11.25, 4.2, 0.18, 2.7, materials.ceiling);
+  box(-1.97, 1.45, 10.2, 0.10, 2.9, 0.12, materials.galvanized);
+  box(1.97, 1.45, 10.2, 0.10, 2.9, 0.12, materials.galvanized);
+  box(1.45, 1.25, 10.35, 0.34, 0.42, 0.12, materials.steelDark);
+  box(1.45, 1.30, 10.43, 0.22, 0.08, 0.03, materials.lampGlow);
 
   // West Wall (X = -16.0m)
   box(-16.1, 3.75, 0, 0.2, 7.5, 20.2, materials.wall);
@@ -62,19 +75,19 @@ export function buildBasementEnvironment(T, scene) {
 
   // --- 2. Concrete Equipment Plinths & Secondary Containment ---
   // North equipment plinth (X: -14 to +14, Z: -5.0, depth 3.6m, height 0.18m)
-  box(0, 0.09, -5.0, 28.0, 0.18, 3.8, materials.curb);
+  box(0, 0.09, galleryZ(-5.0), 28.0, 0.18, 3.8, materials.curb);
 
   // Southwest utility plinth (X: -11.0, Z: 5.5, width 8.0, depth 2.6, height 0.15)
-  box(-9.5, 0.075, 5.5, 9.5, 0.15, 2.8, materials.curb);
+  box(-9.5, 0.075, galleryZ(5.5), 9.5, 0.15, 2.8, materials.curb);
 
   // Southeast electrical enclosure curb (X: 6.0, Z: 6.5, width 7.0, depth 2.2, height 0.12)
-  box(6.0, 0.06, 6.5, 7.0, 0.12, 2.4, materials.curb);
+  box(6.0, 0.06, galleryZ(6.5), 7.0, 0.12, 2.4, materials.curb);
 
   // --- 3. Central Inspection Aisle Markings ---
   // Central aisle: 3.4m wide (between Z = -1.7 and Z = +1.7)
   // Subtle demarcation lines along the floor
-  box(0, 0.005, -1.7, 28.0, 0.01, 0.1, materials.aisleStripe);
-  box(0, 0.005, 1.7, 28.0, 0.01, 0.1, materials.aisleStripe);
+  box(0, 0.005, -1.1, 28.0, 0.01, 0.1, materials.aisleStripe);
+  box(0, 0.005, 1.1, 28.0, 0.01, 0.1, materials.aisleStripe);
 
   // Access cross-aisle markings from south entrance (X: 0, Z: 1.7 to 9.5)
   box(-1.7, 0.005, 5.6, 0.1, 0.01, 7.8, materials.aisleStripe);
@@ -113,7 +126,7 @@ export function buildBasementEnvironment(T, scene) {
       box(x, 6.7, z, 2.2, 0.05, 0.25, materials.lampGlow);
 
       // Light source
-      const light = new T.PointLight(0xf4f0e6, 45, 14, 1.8);
+      const light = new T.PointLight(0xf4f0e6, 12, 12, 2);
       light.position.set(x, 6.5, z);
       light.castShadow = (Math.abs(x) <= 6 && z === 0); // Shadow on central aisle lights only to preserve performance
       group.add(light);

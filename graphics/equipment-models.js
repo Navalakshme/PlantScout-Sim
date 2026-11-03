@@ -19,6 +19,8 @@ export function buildEquipmentModels(T, scene) {
   };
 
   const equipmentMap = new Map();
+  const instrumentDisplays = [];
+  let displayClock = 0;
   const animatedObjects = {
     agitatorReactor: null,
     agitatorBlender: null,
@@ -75,6 +77,53 @@ export function buildEquipmentModels(T, scene) {
     gauge(parent, x + 0.26, y + 0.95, z);
 
     animatedObjects.pumps.push({ id, mesh: motor });
+  }
+
+  function addInstrumentDisplay(root, spec) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 224;
+    const texture = new T.CanvasTexture(canvas);
+    texture.colorSpace = T.SRGBColorSpace;
+    const panel = new T.Mesh(
+      new T.PlaneGeometry(1.38, 0.60),
+      new T.MeshBasicMaterial({ map: texture, side: T.FrontSide, toneMapped: false })
+    );
+    const northBank = spec.position[2] < 0;
+    panel.position.set(0, Math.min(spec.dimensions[1] + 0.38, 3.35),
+      (northBank ? 1 : -1) * (spec.dimensions[2] / 2 + 0.18));
+    if (!northBank) panel.rotation.y = Math.PI;
+    root.add(panel);
+    instrumentDisplays.push({ spec, canvas, texture, panel });
+  }
+
+  function updateInstrumentDisplay(display, snap) {
+    const { spec, canvas, texture } = display;
+    const context = canvas.getContext('2d');
+    const sensor = spec.instruments?.find(item => item.unit === '°C');
+    let value = typeof sensor?.defaultVal === 'number' ? sensor.defaultVal : 24.0;
+    if (spec.id === 'R-101') value = snap.temperatures['R-101_proc'];
+    if (spec.id === 'BL-301') value = snap.temperatures['BL-301_proc'];
+    if (spec.id === 'P-301') value = snap.temperatures['P-301_brg'];
+    const alarm = sensor && Number.isFinite(sensor.alarmMax) && value >= sensor.alarmMax;
+    context.fillStyle = '#111a20';
+    context.fillRect(0, 0, 512, 224);
+    context.strokeStyle = alarm ? '#e35f55' : '#718c99';
+    context.lineWidth = 8;
+    context.strokeRect(4, 4, 504, 216);
+    context.fillStyle = '#e9f2f3';
+    context.font = 'bold 42px monospace';
+    context.fillText(spec.id, 25, 58);
+    context.fillStyle = '#9fb2bc';
+    context.font = '22px sans-serif';
+    context.fillText(spec.name.slice(0, 29), 25, 91);
+    context.fillStyle = alarm ? '#ff7167' : '#77dbc4';
+    context.font = 'bold 60px monospace';
+    context.fillText(`${Number(value).toFixed(1)}°C`, 25, 166);
+    context.fillStyle = '#8fa5b1';
+    context.font = '18px sans-serif';
+    context.fillText(sensor ? sensor.name.toUpperCase() : 'SIMULATED SURFACE TEMP', 25, 197);
+    texture.needsUpdate = true;
   }
 
   // --- Build Every Equipment Assembly ---
@@ -469,9 +518,13 @@ export function buildEquipmentModels(T, scene) {
 
       // 28. Door Assembly DOOR-001
       case 'DOOR-001': {
-        box(root, 0, 1.3, 0, 1.6, 2.5, 0.1, materials.steelDark);
-        box(root, 0, 1.3, 0.06, 0.9, 0.08, 0.08, materials.stainless); // Push bar
-        box(root, 0, 2.65, 0.1, 0.6, 0.2, 0.05, materials.screenGlow); // Exit sign
+        box(root, 0, 1.3, 0, 1.8, 2.6, 0.16, materials.steelDark);
+        box(root, 0, 1.3, 0.09, 1.5, 2.3, 0.03, materials.galvanized);
+        box(root, 0, 1.3, 0.12, 1.35, 2.1, 0.03, materials.steelDark);
+        box(root, 0, 1.85, 0.16, 0.5, 0.38, 0.02, materials.glass); // Inspection window
+        box(root, 0, 1.3, 0.17, 1.2, 0.08, 0.08, materials.stainless); // Push bar
+        for (const h of [0.35, 1.3, 2.2]) box(root, -0.91, h, 0, 0.10, 0.18, 0.22, materials.stainless);
+        box(root, 0, 2.7, 0.13, 0.9, 0.16, 0.04, materials.screenGlow); // Access indicator
         break;
       }
 
@@ -485,6 +538,7 @@ export function buildEquipmentModels(T, scene) {
       }
     }
 
+    if (spec.id !== 'DOOR-001' && spec.id !== 'ROBOT-001') addInstrumentDisplay(root, spec);
     scene.add(root);
     equipmentMap.set(spec.id, root);
   });
@@ -494,6 +548,11 @@ export function buildEquipmentModels(T, scene) {
     animatedObjects,
     update(dt, simEngine) {
       const snap = simEngine.getTelemetrySnapshot();
+      displayClock += dt;
+      if (displayClock > 0.4) {
+        displayClock = 0;
+        for (const display of instrumentDisplays) updateInstrumentDisplay(display, snap);
+      }
 
       // Animate Agitators
       if (animatedObjects.agitatorReactor && snap.speeds['AG-101'] > 0) {
