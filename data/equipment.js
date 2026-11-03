@@ -1,4 +1,5 @@
 // PlantScout - Equipment Register
+import { galleryZ } from './layout.js';
 // Exact 37 assemblies for solvent-assisted batch alkyd-resin manufacture (fatty-acid route).
 
 export const EQUIPMENT_REGISTER = [
@@ -687,7 +688,7 @@ export const EQUIPMENT_REGISTER = [
     name: 'Entrance Assembly',
     group: 'Access',
     subsystem: 'access',
-    position: [0.0, 0, 9.5],
+    position: [0.0, 0, 10.0],
     dimensions: [1.8, 2.6, 0.3],
     viewpoint: [0.0, 7.5],
     target: [0.0, 1.4, 9.5],
@@ -730,7 +731,7 @@ export const INSPECTION_STATIONS = [
   { id: 'STATION-02', name: 'Utility Edge: Instrument Air Package', position: [-6.0, 3.5], targetEq: 'AC-701', lookAt: [-7.0, 1.0, 6.0], isSpillZone: false },
   { id: 'STATION-03', name: 'Utility Edge: Air Receiver & Header', position: [-4.0, 3.5], targetEq: 'V-701', lookAt: [-5.0, 1.5, 6.0], isSpillZone: false },
   { id: 'STATION-04', name: 'Utility Edge: Heat Exchanger Skid', position: [-9.5, 3.5], targetEq: 'HX-501', lookAt: [-9.5, 1.2, 5.5], isSpillZone: false },
-  { id: 'STATION-05', name: 'Utility Edge: CW Pump & Thermal Boundary', position: [-12.0, 3.5], targetEq: 'P-501', lookAt: [-12.0, 0.7, 5.5], isSpillZone: false },
+  { id: 'STATION-05', name: 'Utility Edge: CW Pump & Thermal Boundary', position: [-12.0, 3.0], targetEq: 'P-501', lookAt: [-12.0, 0.7, 5.5], isSpillZone: false },
   { id: 'STATION-06', name: 'Electrical Suite: Motor Control Centre', position: [4.5, 3.5], targetEq: 'MCC-801', lookAt: [4.5, 1.4, 6.5], isSpillZone: false },
   { id: 'STATION-07', name: 'Electrical Suite: Process Control Console', position: [7.5, 3.5], targetEq: 'PLC-801', lookAt: [7.5, 1.2, 6.5], isSpillZone: false },
   { id: 'STATION-08', name: 'Containment Zone: Sump & Transfer Pump', position: [12.0, 1.8], targetEq: 'S-901', lookAt: [13.0, 0.2, 3.5], isSpillZone: false },
@@ -747,3 +748,19 @@ export const INSPECTION_STATIONS = [
   { id: 'STATION-19', name: 'Storage & Packaging: TK-401 & Filling FL-401', position: [10.5, -2.5], targetEq: 'TK-401', lookAt: [10.5, 1.4, -4.5], isSpillZone: false },
   { id: 'STATION-20', name: 'Return to Robot Dock', position: [0.0, 7.8], targetEq: 'ROBOT-001', lookAt: [0.0, 0.6, 7.8], isSpillZone: false }
 ];
+
+for (const item of EQUIPMENT_REGISTER) {
+  if (item.id === 'DOOR-001' || item.id === 'ROBOT-001') continue;
+  item.position[2] = galleryZ(item.position[2]);
+  if (item.viewpoint) item.viewpoint[1] = galleryZ(item.viewpoint[1]);
+  if (item.target) item.target[2] = galleryZ(item.target[2]);
+  for (const port of Object.values(item.ports || {})) {
+    if (Array.isArray(port) && port.length === 3) port[2] = galleryZ(port[2]);
+  }
+}
+for (const item of EXTERNAL_BOUNDARIES) item.position[2] = galleryZ(item.position[2]);
+for (const station of INSPECTION_STATIONS) {
+  if (station.targetEq === 'ROBOT-001') continue;
+  station.position[1] = galleryZ(station.position[1]);
+  station.lookAt[2] = galleryZ(station.lookAt[2]);
+}

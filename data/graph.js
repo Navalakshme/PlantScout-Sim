@@ -1,4 +1,5 @@
 // PlantScout - Shared Connection Graph Data Model
+import { galleryZ } from './layout.js';
 // Directly connects equipment ports with 3D routes, fluid services, and process states.
 
 export const FLUID_SERVICES = {
@@ -477,3 +478,7 @@ export const CONNECTION_LINES = [
     ]
   }
 ];
+
+for (const line of CONNECTION_LINES) {
+  for (const point of line.points) point[2] = galleryZ(point[2]);
+}
