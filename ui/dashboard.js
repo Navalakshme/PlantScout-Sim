@@ -6,6 +6,8 @@ import { CONNECTION_LINES, FLUID_SERVICES } from '../data/graph.js';
 import { PROCESS_STAGES } from '../sim/engine.js';
 import { galleryZ } from '../data/layout.js';
 
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+
 export class DashboardController {
   constructor(engine, scenarioManager, rover, metaClient, camera, scene, ThreeInstance) {
     this.engine = engine;
@@ -38,6 +40,9 @@ export class DashboardController {
     this.bindEvents();
     this.updateTopBar();
     this.updateAiStatusBadge();
+    this.renderEquipmentList();
+    this.updateReportUI();
+    this.switchView('explore');
   }
 
   initElements() {
@@ -153,7 +158,21 @@ export class DashboardController {
     };
 
     // Robot Inspection Controls
-    this.$('btn-start-inspection').onclick = () => this.startNewInspection();
+    this.$('btn-start-inspection').onclick = () => {
+      if (this.engine.stageIndex === 0) {
+        this.$('btn-start-inspection').textContent = 'Start the resin system first';
+        setTimeout(() => { this.$('btn-start-inspection').textContent = '▶ Start Autonomous Inspection'; }, 2300);
+        return;
+      }
+      // Hold a repeatable operating point while the slower inspection covers the whole hall.
+      this.engine.setStage(8);
+      this.engine.isAutoAdvancing = false;
+      document.body.classList.add('inspection-active');
+      this.$('scan-hud').classList.remove('hidden');
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      this.rover.speedMultiplier = Number(this.$('inspection-speed-select').value);
+      this.startNewInspection();
+    };
     this.$('btn-pause-inspection').onclick = () => this.rover.pause();
     this.$('btn-reset-dock').onclick = () => this.rover.resetToDock();
 
@@ -179,10 +198,21 @@ export class DashboardController {
     this.$('btn-print-report').onclick = () => window.print();
 
     // Close Modals
-    this.$('btn-close-eq-drawer').onclick = () => {
-      this.$('equipment-drawer').classList.add('hidden');
-      this.highlightBox.visible = false;
-    };
+    this.$('btn-close-eq-drawer').onclick = () => this.closeEquipmentDetails();
+    document.addEventListener('pointerdown', event => {
+      if (this.$('equipment-details-modal').classList.contains('hidden')) return;
+      if (this.$('equipment-details-modal').contains(event.target)) return;
+      if (event.target.closest('.equipment-card')) return;
+      this.closeEquipmentDetails();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') this.closeEquipmentDetails();
+    });
+  }
+
+  closeEquipmentDetails() {
+    this.$('equipment-details-modal').classList.add('hidden');
+    this.highlightBox.visible = false;
   }
 
   switchView(viewName) {
@@ -231,6 +261,8 @@ export class DashboardController {
     const snap = this.engine.getTelemetrySnapshot();
 
     this.resetInspectionState();
+    this.metaClient.resetBudget();
+    this.rover.setAlert(false);
     this.inspectionSession.id = `INSP-${Date.now().toString(36).toUpperCase()}-${sc.id.toUpperCase()}`;
     this.inspectionSession.scenario = sc.id;
     this.inspectionSession.startTime = new Date();
@@ -239,6 +271,8 @@ export class DashboardController {
 
     this.rover.startAutomaticInspection();
     this.switchView('inspection');
+    this.$('scan-title').textContent = 'SCOUT-01 • ROUTE ACTIVE';
+    this.$('scan-detail').textContent = `Starting ${INSPECTION_STATIONS.length}-stop inspection. Simulated sensors and selected Meta camera checks.`;
     this.updateTopBar();
     this.updateReportUI();
   }
@@ -259,6 +293,9 @@ export class DashboardController {
   }
 
   async handleStationObservation(station, stationIndex, cameraFrameBase64) {
+    this.$('scan-title').textContent = `SCOUT-01 • ${stationIndex + 1}/${INSPECTION_STATIONS.length}`;
+    this.$('scan-detail').textContent = `Scanning ${station.name}; reading installed instruments.`;
+    this.announce(`Scanning ${station.name}. Reading equipment instruments.`);
     this.inspectionSession.visitedStations.add(station.id);
     if (station.targetEq) {
       this.inspectionSession.observedEquipment.add(station.targetEq);
@@ -284,7 +321,8 @@ export class DashboardController {
           else if (val >= 75.0) st = 'WARNING';
         } else if (inst.tag === 'F-301.DPT') {
           val = +snap.pressures['F-301_dp'].toFixed(2);
-          if (val >= 2.2) st = 'WARNING';
+          if (val >= 2.2) st = 'ALARM';
+          else if (val >= 1.5) st = 'WARNING';
         } else if (inst.tag === 'R-101.TT-01') {
           val = +snap.temperatures['R-101_proc'].toFixed(1);
         } else if (inst.tag === 'R-101.LT-01') {
@@ -314,7 +352,6 @@ export class DashboardController {
       stationId: station.id,
       stationName: station.name,
       equipmentIds: station.targetEq ? [station.targetEq] : [],
-      isSpillZone: Boolean(station.isSpillZone && this.scenarioManager.currentScenario === 'defective'),
       cameraImageBase64: cameraFrameBase64,
       telemetry: relevantTelemetry,
       thresholds: eqSpec?.instruments?.map(i => ({ tag: i.tag, warnMax: i.warnMax, alarmMax: i.alarmMax })) || [],
@@ -327,15 +364,53 @@ export class DashboardController {
       res.finding.thumbnailUrl = cameraFrameBase64;
       res.finding.stationName = station.name;
       this.inspectionSession.findings.push(res.finding);
+      const alarm = res.finding.severity === 'CRITICAL' || res.finding.severity === 'WARNING';
+      this.rover.setAlert(alarm);
+      this.$('scan-hud').classList.toggle('alarm', alarm);
+      this.$('scan-title').textContent = `${station.targetEq || 'AREA'} • ${res.finding.severity}`;
+      this.$('scan-detail').textContent = `${res.finding.observation} ${res.finding.source === 'Simulation telemetry only' ? '(telemetry only)' : '(Meta camera analysis)'}`;
+      const spoken = alarm ? `Alert at ${station.name}. ${res.finding.observation}` : `${station.name}. Simulated readings normal. ${res.finding.source === 'Simulation telemetry only' ? 'Camera photo recorded for review.' : 'Meta camera check complete.'}`;
+      this.announce(spoken);
+    }
+
+    if (station.isSpillZone && this.scenarioManager.getScenario().spill && !/spill|puddle|pooling/i.test(res?.finding?.observation || '')) {
+      const spillFinding = {
+        inspectionId: this.inspectionSession.id,
+        equipmentOrLocation: 'P-301 floor zone',
+        evidenceIds: [evidenceId], evidenceId, thumbnailUrl: cameraFrameBase64,
+        observation: 'The defective simulation places a visible floor puddle near P-301. The camera analysis did not confirm it in this frame.',
+        measurementComparison: 'Visual hazard fixture; no chemical identity or measured concentration available.',
+        severity: 'WARNING', confidence: 0,
+        uncertainty: 'Scenario ground truth only. Photo needs human review; do not treat as an AI visual detection.',
+        suggestedFollowUp: 'Review the captured frame and inspect the floor zone in person only under site safety procedures.',
+        source: 'Simulation ground truth'
+      };
+      this.inspectionSession.findings.push(spillFinding);
+      this.rover.setAlert(true);
+      this.$('scan-hud').classList.add('alarm');
+      this.$('scan-detail').textContent = spillFinding.observation;
+      this.announce('Simulated floor spill flagged near pump P three zero one. Visual confirmation requires review.');
     }
 
     // If last station, conclude
     if (stationIndex === INSPECTION_STATIONS.length - 1) {
       this.inspectionSession.endTime = new Date();
       this.inspectionSession.status = 'Completed';
+      this.$('scan-title').textContent = 'SCOUT-01 • INSPECTION COMPLETE';
+      this.$('scan-detail').textContent = `Observed ${this.inspectionSession.observedEquipment.size}/${EQUIPMENT_REGISTER.length} registered assemblies. Open the report for findings and photos.`;
+      this.announce('Inspection complete. Review the evidence report.');
     }
 
     this.updateReportUI();
+  }
+
+  announce(message) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const speech = new SpeechSynthesisUtterance(message.slice(0, 300));
+    speech.rate = 0.96;
+    speech.volume = 0.8;
+    window.speechSynthesis.speak(speech);
   }
 
   updateTopBar() {
@@ -357,10 +432,10 @@ export class DashboardController {
     const st = await this.metaClient.checkServerStatus();
     const pill = this.$('ai-status-pill');
     if (st.configured) {
-      pill.textContent = `Meta Llama 3.2 Vision: Connected`;
+      pill.textContent = 'Meta Muse Spark: Key configured';
       pill.className = 'status-pill ready';
     } else {
-      pill.textContent = `Meta AI: Unconfigured (Deterministic Telemetry Mode)`;
+      pill.textContent = 'Meta AI unavailable • Simulated telemetry';
       pill.className = 'status-pill unconfigured';
       pill.title = 'Set META_API_KEY on the server to enable live vision inference.';
     }
@@ -515,13 +590,13 @@ export class DashboardController {
     const coveragePercent = Math.round((visitedCount / totalStations) * 100);
 
     this.$('rep-coverage-stat').textContent = `${visitedCount}/${totalStations} Stations (${coveragePercent}%)`;
-    this.$('rep-observed-stat').textContent = `${observedCount}/${totalEquipment} Verified Assemblies`;
+    this.$('rep-observed-stat').textContent = `${observedCount}/${totalEquipment} Visited Assemblies`;
 
     // Calculate Overall Conclusion
     const criticals = report.findings.filter(f => f.severity === 'CRITICAL');
     const warnings = report.findings.filter(f => f.severity === 'WARNING');
 
-    let overallConclusion = 'No configured anomalies observed in inspected areas.';
+    let overallConclusion = 'Inspection has not run.';
     let conclusionClass = 'conclusion-normal';
 
     if (report.status !== 'Completed') {
@@ -530,6 +605,8 @@ export class DashboardController {
     } else if (criticals.length > 0 || warnings.length > 0) {
       overallConclusion = `Anomalies detected: ${criticals.length} critical condition(s) and ${warnings.length} warning(s) observed.`;
       conclusionClass = 'conclusion-anomaly';
+    } else {
+      overallConclusion = 'No threshold alarms found in sampled simulated telemetry. Unreviewed camera frames may contain undetected defects.';
     }
 
     const conclusionElem = this.$('rep-conclusion');
@@ -546,17 +623,17 @@ export class DashboardController {
         return `
           <div class="finding-card ${f.severity.toLowerCase()}">
             <div class="finding-header">
-              <span class="finding-eq">${f.equipmentOrLocation}</span>
+              <span class="finding-eq">${escapeHtml(f.equipmentOrLocation)}</span>
               <span class="finding-badge ${f.severity.toLowerCase()}">${f.severity}</span>
-              <span class="finding-evidence">${f.evidenceIds.join(', ')}</span>
+              <span class="finding-evidence">${escapeHtml(f.evidenceIds.join(', '))} • ${escapeHtml(f.source || 'Meta Muse Spark image analysis')}</span>
             </div>
             <div class="finding-body">
               ${f.thumbnailUrl ? `<img src="${f.thumbnailUrl}" class="evidence-thumb" alt="Captured Frame" />` : ''}
               <div class="finding-details">
-                <p><b>Observation:</b> ${f.observation}</p>
-                <p><b>Measurement Comparison:</b> ${f.measurementComparison}</p>
-                <p><b>Confidence & Uncertainty:</b> ${(f.confidence * 100).toFixed(0)}% — ${f.uncertainty}</p>
-                <p class="finding-action"><b>Recommended Follow-up:</b> ${f.suggestedFollowUp}</p>
+                <p><b>Observation:</b> ${escapeHtml(f.observation)}</p>
+                <p><b>Measurement Comparison:</b> ${escapeHtml(f.measurementComparison)}</p>
+                <p><b>Visual confidence & uncertainty:</b> ${f.source === 'Simulation telemetry only' ? 'Not assessed' : `${(f.confidence * 100).toFixed(0)}%`} — ${escapeHtml(f.uncertainty)}</p>
+                <p class="finding-action"><b>Recommended Follow-up:</b> ${escapeHtml(f.suggestedFollowUp)}</p>
               </div>
             </div>
             <div class="finding-footer">
@@ -621,6 +698,7 @@ export class DashboardController {
         measurementComparison: f.measurementComparison,
         confidence: f.confidence,
         uncertainty: f.uncertainty,
+        source: f.source,
         suggestedFollowUp: f.suggestedFollowUp,
         evidenceIds: f.evidenceIds
       })),
