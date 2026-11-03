@@ -1,4 +1,5 @@
 // PlantScout - Scenario Manager
+import { galleryZ } from '../data/layout.js';
 // Manages Normal vs Defective scenarios with deterministic seeds, physical spill puddle, and state reset.
 
 export const SCENARIOS = {
@@ -62,6 +63,11 @@ export const SCENARIOS = {
     }
   }
 };
+
+SCENARIOS.defective.spill.position[2] = galleryZ(SCENARIOS.defective.spill.position[2]);
+for (const defect of SCENARIOS.defective.injectedDefects) {
+  if (defect.location) defect.location[2] = galleryZ(defect.location[2]);
+}
 
 export class ScenarioManager {
   constructor(engine) {
