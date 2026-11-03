@@ -1,37 +1,28 @@
-# PlantScout â€” Resin Works Interior
+# PlantScout — Resin Works and SCOUT-01
 
-A browser-based, first-person chemical process basement simulation. The plant is one continuous process hall with pump skids, upper vessels, connected pipework, wall-mounted services, utility vessels and a grated floor drain. Robot, inspection routes and reports remain removed while the environment is developed.
+An enclosed industrial walkthrough with 40 named equipment assemblies, their functions and connections, and an original four-wheel inspection robot.
 
-## Walkthrough
+## Open and explore
+Descend the stair and enter demo PIN **2048**. Open **Equipment** to search and select any assembly. Selection walks to a clear inspection viewpoint and displays the part name, purpose and process connections. Click visible labels for details. Drag to look around and use WASD to walk.
 
-1. Descend the enclosed access stair.
-2. Unlock the insulated access door with demo PIN **2048**.
-3. Enter the high-ceiling enclosed process gallery and see the connected resin unit from the door.
-4. Expand **Plant controls** to start ventilation, circulation and mixing in sequence. The panel starts collapsed to keep the view clear.
-5. Explore by dragging to look and holding WASD or the on-screen arrows to walk. A short tap takes one step.
-6. Use **Labels on/off** to show nearby equipment tags. There is no viewpoint navigation bar or teleport between sections.
-7. Enable synthesized machinery sound; run the timed utility steam demonstration; stop the process or return to the stair.
+Open **Inspection robot** for **Follow robot** or **Robot camera**. W/S drives forward/reverse, A/D turns and Space stops. Named touch buttons offer the same drive controls. **Start automatic route** visits 19 inspection stops including the dock. Pause/continue, emergency stop/resume, route-speed, reset, map and downloadable visitation log are included. Expand **Robot parts and functions** for its component list.
 
-The PIN is a client-side interaction, not authentication. The roof is continuous; there is no cutaway toggle. Movement is bounded by room and equipment clearance regions.
+## Restored equipment
+Comparison with the earlier e6ac943 layout restored the phase separator, contained sump, sump/effluent pumps, polish filter and feed pump, extraction fan, detector heads, isolation station and reactor instrument assembly. The stainless reactor, blend/holding/product vessels, feed system, condenser/receiver, cooler, filters, packaging, utility heat exchanger, air supply and motor-control equipment remain present. The overhead rack has three rear utility headers.
 
-## Process basis
+## Simulation limits
+This is an illustrative resin-solution layout, not an exhaustive engineered bill of materials. Robot movement is kinematic; routes and range rays use a known obstacle map. It does not run Webots/Gazebo physics, SLAM or real hazard detection. Camera view is rendered from the robot mast. Route logs record visits, not chemical safety findings. Plant readings are synthetic. No Meta API or paid plugin is used.
 
-Equipment follows an epoxy-resin solution unit: reactor, condenser, separator, holding vessel, transfer pumps, filtration and utilities. The process reference is the [Star Industries EIA/EMP report](https://environmentclearance.nic.in/writereaddata/online/EC/020420224ezpn1q5ohl49620151ADSreplywithenclosures.pdf). The report does not specify this basement layout. All geometry and textures are original procedural artwork; no source illustrations are reproduced.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [ROBOT_SIMULATION_OPTIONS.md](ROBOT_SIMULATION_OPTIONS.md) for implementation details and checked robot references. No third-party robot assets were copied.
 
-## Scope
+## Run and verify
+Run `node serve.cjs` or `python -m http.server 8770`. Three.js and fonts require internet access. `node verify-navigation.mjs` tests every inspection viewpoint, every route leg, obstacle rejection and detours. The browser flow additionally verifies manual forward/reverse/turning, emergency stop, pause, 19/19 automatic-route completion, labels, search and guided equipment inspection.
 
-This is an interactive visual simulation, not a photorealistic scan, engineered plant, thermal/fire certification or chemical physics model. Readings, utility vessels and startup sequencing are illustrative. Visible steam is confined to a utility demonstration; normal xylene handling is represented as closed pipework. Audio is synthesized in the browser after the visitor enables it. No Meta API is used in this environment stage.
-
-## Files and preview
-
-- `app.js`: entry, walking, process states, audio and interface.
-- `interior.js`: enclosed shell, stair and PIN door, wall service pipework, utility vessels, drainage, labels, collisions and machinery animation. Fixed geometry is batched by material for browser performance.
-- `industrial-layout.js`: restored integrated resin unit with pump gallery, electrical bay, reactor, condenser, holding tank, day tank, filtration and utilities.
-- `floor-concrete.png`: original AI-generated neutral industrial surface texture, generated with the built-in image tool. Prompt: seamless orthographic maintained grey concrete/epoxy screed floor, mild aggregate and scuffing, even lighting, no objects, joints, text, shadows or green tint.
-- `index.html` / `styles.css`: responsive walkthrough controls.
-
-Serve this folder with `python -m http.server 8766` or `node serve.cjs`. Three.js and fonts require internet access.
-
-## Direction to preserve
-
-Concentrate on a human-scale, enclosed industry before adding robotics. Keep the stair and PIN door entry, high ceiling, insulated-looking surfaces, physical machinery details, sound and animated process behaviour. The user approved eight concept images but then clarified that the later separated white rooms felt artificial. Preserve one whole, visibly connected industry from the entrance with walking controls, without the viewpoint navigation bar. Do not restore a green aesthetic, the oversized introductory card, the robot dashboard or an open-top model without a new request. The approved images remain art direction for equipment detail; this interactive procedural model does not reproduce their photographic detail exactly.
+## Files
+- equipment.mjs: named inventory, functions and viewpoints.
+- industrial-layout.js / restored-machinery.js: equipment geometry.
+- interior.js: enclosed shell, entry, utility and existing process animation.
+- navigation.mjs: floor map, collision clearance and A* routing.
+- rover.js: robot model and controller.
+- experience.js: equipment directory, labels, robot views and controls.
+- app.js: rendering, entry, startup sequence and audio.

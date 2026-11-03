@@ -1,5 +1,6 @@
+import {free} from './navigation.mjs?v=20261103r1';
 import * as T from 'three';
-import {buildIndustry} from './industrial-layout.js';
+import {buildIndustry} from './industrial-layout.js?v=20261103r1';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 export function buildInterior(scene){
  const equipment=buildIndustry(T,scene);
@@ -109,15 +110,14 @@ export function buildInterior(scene){
  const fan=new T.Group();fan.position.set(-10,3.2,7.88);fan.userData.noMerge=true;scene.add(fan);
  for(let i=0;i<6;i++){const blade=box(0,0,0,.16,1.35,.06,metal,fan);blade.rotation.z=i*Math.PI/3;}
  for(let i=-4;i<=4;i++)box(-10+i*.18,3.2,7.72,.025,1.55,.04,dark);
- const flowRotors=[];for(const x of [-5.1,-.8,3.5,7.8]){const rotor=new T.Mesh(new T.TorusGeometry(.18,.025,8,20),yellow);rotor.position.set(x,1.55,-1.66);rotor.userData.noMerge=true;scene.add(rotor);const spoke=box(0,0,0,.32,.025,.025,yellow,rotor);flowRotors.push(rotor);}
+ const flowRotors=[];for(const x of []){const rotor=new T.Mesh(new T.TorusGeometry(.18,.025,8,20),yellow);rotor.position.set(x,1.55,-1.66);rotor.userData.noMerge=true;scene.add(rotor);const spoke=box(0,0,0,.32,.025,.025,yellow,rotor);flowRotors.push(rotor);}
  const mixers=[];
  for(const [x,y,z] of [[-3.2,12.0,-5.4],[8,11.0,-4.9]]){const r=new T.Group();r.position.set(x,y,z);r.userData.noMerge=true;scene.add(r);for(let i=0;i<3;i++){const b=box(0,0,0,.62,.05,.08,metal,r);b.rotation.y=i*Math.PI/3;}mixers.push(r);}
  let screenAge=0;
  const particles=[];const puffCanvas=document.createElement('canvas');puffCanvas.width=puffCanvas.height=64;const pg=puffCanvas.getContext('2d'),grad=pg.createRadialGradient(32,32,0,32,32,32);grad.addColorStop(0,'#e4ebeac0');grad.addColorStop(1,'#e4ebea00');pg.fillStyle=grad;pg.fillRect(0,0,64,64);const puffTex=new T.CanvasTexture(puffCanvas);
  for(let i=0;i<28;i++){const p=new T.Sprite(new T.SpriteMaterial({map:puffTex,transparent:true,opacity:0,depthWrite:false}));scene.add(p);particles.push(p);}
  // Walking clearance keeps the visitor away from equipment bases and walls.
- const blocked=[[-12.8,12.8,-8,-1.25],[10.6,12.9,2.2,6.9],[-10.5,-5.3,5.65,7.6],[-4.4,-1.9,6.0,7.6],[-.4,.8,6.5,7.8],[2.9,4.5,7.1,7.9],[5,7.2,6.1,7.5],[ -.4,1.9,2.5,3.7]];
- const canWalk=(x,z)=>x>-12.7&&x<12.7&&z>-7.5&&z<7.85&&!blocked.some(([a,b,c,d])=>x>a-.18&&x<b+.18&&z>c-.18&&z<d+.18)&&![-11.2,-5.6,0,5.6,11.2].some(cx=>[-5.8,0].some(cz=>Math.hypot(x-cx,z-cz)<.52));
+ const canWalk=(x,z)=>free(x,z,.25);
  function update(time,power,steam,dt,camera,showLabels=true){labels.forEach(o=>{const d=o.position.distanceTo(camera.position),scale=o.userData.labelScale,f=Math.min(1,d*.30/scale.x);o.visible=showLabels&&d<9;o.scale.copy(scale).multiplyScalar(f);});fan.rotation.z+=power*dt*8;mixers.forEach(r=>r.rotation.y+=power*dt*3);flowRotors.forEach(r=>r.rotation.z+=power*dt*4);equipment.panelStatusLights.forEach((l,i)=>{l.visible=power>.05||i%3===0;});particles.forEach((p,i)=>{const t=(time*.27+i/28)%1;p.position.set(-7.6+Math.sin(i*8+t*4)*t*.5,1.3+t*2.7,4.4-t*.35);p.scale.setScalar(.25+t*1.4);p.material.opacity=steam*Math.sin(t*Math.PI)*.23;});screenAge+=dt;if(screenAge<.2)return;screenAge=0;const g=screen.getContext('2d');g.fillStyle='#18232e';g.fillRect(0,0,512,256);g.fillStyle='#e7c477';g.font='24px monospace';g.fillText('MCC-01 / RESIN UNIT',24,42);g.font='38px monospace';g.fillText(power>.4?'PROCESS RUNNING':'STANDBY',24,105);g.font='20px monospace';g.fillText('CIRCULATION '+(power*12.8).toFixed(1)+' m3/h',24,165);g.fillText('EXTRACTION '+(power>.05?'ON':'OFF'),24,215);screenMap.needsUpdate=true;}
  // Batch fixed plant meshes while preserving moving assemblies and status lamps.
  equipment.panelStatusLights.forEach(o=>o.userData.noMerge=true);

@@ -1,0 +1,47 @@
+// Inventory of the illustrated resin solution unit. Not a certified plant design.
+const item=(id,name,group,position,view,fn,links)=>({id,name,group,position,view,fn,links});
+export const equipment=[
+ item('R-101','Jacketed resin reactor','Reaction',[-8.7,3,-4.6],[-8.7,.8],'Agitates the batch inside a jacketed vessel. The jacket exchanges heat with the utility circuit.','Feed → reactor → blend vessel'),
+ item('AG-101','Reactor agitator drive','Reaction',[-8.7,5.35,-4.6],[-8.7,.8],'Motor and gearbox turn the internal mixing shaft. The external drive is visible; the vessel remains closed.','Mounted on R-101'),
+ item('R-102','Blend vessel','Reaction',[-3.2,3,-4.6],[-3.2,.8],'Blends transferred resin with the specified formulation ingredients.','R-101 → R-102 → V-201'),
+ item('V-201','Intermediate holding vessel','Reaction',[2.3,3,-4.6],[2.3,.8],'Holds a batch before filtration and final product transfer.','Blend vessel → filtration'),
+ item('V-202','Finished product vessel','Reaction',[7.8,3,-4.6],[7.8,.8],'Holds filtered product for controlled transfer to packaging.','Filter → product transfer → filling'),
+ item('TK-01','Resin feed day tank','Feed',[-11.9,1.7,-5],[-11.6,.8],'Provides a contained local supply of a liquid resin feed ingredient.','Day tank → dosing skid'),
+ item('TK-02','Solvent day tank','Feed',[-10.8,1.7,-6.8],[-10.4,.8],'Provides a closed local solvent supply. The illustration uses closed transfer lines.','Day tank → metering → reactor'),
+ item('DS-101','Diaphragm metering skid','Feed',[-10.9,1.6,-3],[-10.7,.8],'Two diaphragm heads meter small liquid feed streams through narrow tubing.','Feed tanks → reactor'),
+ item('P-01','Feed transfer pump','Feed',[-11.4,.9,-2.2],[-11.4,.8],'Transfers feed from the day tank to the dosing line.','TK-01 / TK-02 → DS-101'),
+ item('P-101A','Duty circulation pump','Pumps',[-8.6,1,-1.95],[-8.6,.8],'Motor, coupling guard and centrifugal casing circulate process liquid.','Reactor circulation loop'),
+ item('P-101B','Standby circulation pump','Pumps',[-6.9,1,-1.95],[-6.9,.8],'Provides an alternate circulation pump position in the illustrated duty/standby arrangement.','Parallel to P-101A'),
+ item('E-101','Reflux condenser','Recovery',[-6,3.5,-4.8],[-6,.8],'Horizontal heat exchanger condenses vapour leaving the reactor into liquid.','Reactor overhead → condensate receiver'),
+ item('V-103','Condensate receiver','Recovery',[-6,1.3,-5],[-6,.8],'Collects liquid from the condenser before recovery or separation.','Condenser → separator'),
+ item('V-104','Horizontal phase separator','Recovery',[-7.9,1.7,2.8],[-7.9,4.6],'Restored horizontal separation vessel with sight glass and separate outlets; illustrates phase separation in the recovery circuit.','Receiver → recovery outlets'),
+ item('E-202','Process plate cooler','Utilities',[-.6,1.4,-2.25],[-.8,.8],'A compressed plate stack transfers heat between separated process and cooling streams.','Process line ↔ cooling loop'),
+ item('F-301','Duplex filter A','Filtration',[4.45,1.5,-2.5],[4.3,.8],'One cartridge housing in a parallel filter assembly, with removable clamped cover.','Hold vessel → product vessel'),
+ item('F-302','Duplex filter B','Filtration',[5.3,1.5,-2.5],[5,.8],'Second cartridge housing provides an alternate filtration path.','Parallel to F-301'),
+ item('F-401','Polish filter skid','Filtration',[4.2,1.5,2.8],[4.2,4.6],'Restored final filter with inlet/outlet gauges and isolation valves.','Transfer pump → final filtration'),
+ item('P-302','Filter-feed pump','Pumps',[4.2,.65,2.8],[4.2,4.6],'Motor-driven pump on the filter base feeds the polish filter.','Holding → F-401'),
+ item('P-401','Product transfer pump','Pumps',[10.5,1,-2.2],[10.1,.8],'Moves finished resin through a closed transfer line to packaging.','V-202 → FL-401'),
+ item('FL-401','Weighing and filling machine','Packaging',[10.45,1.8,-5.1],[11.7,.8],'Roller bed supports containers; the filling lance and weighing terminal represent controlled filling.','Product transfer → filled drums'),
+ item('PK-401','Closed drum-filling position','Packaging',[11.5,1.4,-5.4],[11.7,.8],'A drum on the weigh platform connects to the closed filling lance.','FL-401 packaging station'),
+ item('DR-401','Finished drum handling','Packaging',[.7,.8,3.1],[.7,4.6],'Banded drums on low pallets await handling after filling.','Filling → storage'),
+ item('S-501','Contained process sump','Containment',[-4.2,.4,2.8],[-4.2,4.6],'Restored recessed collection point with grating and level instrumentation. This is separate from clean floor drainage.','Contained drainage → sump pumps'),
+ item('P-501','Sump pump','Containment',[-4.8,.9,2.8],[-4.8,4.6],'Collects liquid from the contained sump for controlled transfer.','S-501 → effluent holding'),
+ item('P-502','Effluent transfer pump','Containment',[-3.5,.9,2.8],[-3.5,4.6],'Transfers collected liquid to the illustrated effluent outlet.','Sump → treatment boundary'),
+ item('HX-501','Utility plate heat exchanger','Utilities',[-3.1,1.4,6.8],[-3.1,4.6],'Exchanges heat between the utility loop and plant cooling service.','Utility cooling distribution'),
+ item('UT-01','Condensate utility vessel','Utilities',[-9.3,1.6,6.65],[-9.3,4.6],'Collects utility-side condensate in the illustrated thermal-service loop.','Utility return'),
+ item('UT-02','Cooling utility vessel','Utilities',[-6.55,1.6,6.65],[-6.55,4.6],'Provides a local reservoir for the illustrated cooling loop.','Cooling pumps and HX-501'),
+ item('AIR-501','Instrument-air receiver','Utilities',[.2,1.7,7.1],[.2,4.6],'Buffers compressed air supplied to pneumatic instruments and actuators.','Compressor → instrument-air header'),
+ item('AC-501','Enclosed air compressor','Utilities',[6.1,1.1,6.8],[6.1,4.6],'Compressor enclosure with cooling grille supplies the instrument-air receiver.','AC-501 → AIR-501'),
+ item('AHU-501','Extraction fan and duct','Ventilation',[7.7,1.6,2.8],[7.7,4.6],'Restored centrifugal extraction fan and duct outlet move air toward a treatment boundary.','Extract grille → fan → treatment outlet'),
+ item('GD-01','Gas detector heads','Safety',[6.1,1.5,-.95],[6.2,.8],'Detector housings mark monitoring positions. No live gas measurement or safety clearance is provided.','Detector → control alarm'),
+ item('MCC-01','Main motor control centre','Electrical',[12,1.6,6.5],[9.5,4.6],'Local screen and controls indicate the simulated ventilation, circulation and mixing sequence.','Power distribution → motor drives'),
+ item('MCC-02','Local drive cabinet','Electrical',[3.7,1.8,7.65],[3.7,4.6],'Provides local controls and drive enclosure for the represented machinery.','Motor control and field wiring'),
+ item('ESD-01','Emergency isolation station','Safety',[-12.5,1.6,5.5],[-11.5,4.6],'A visible emergency isolation station identifies the plant stop location. Use Stop process in the interface to stop the simulated sequence.','Plant enable circuit'),
+ item('SV-101','Relief and instrument assembly','Safety',[-8.1,4.9,-4.6],[-8.1,.8],'Pressure indication and relief outlet geometry identify the reactor instrument assembly. Settings and discharge design are not simulated.','Reactor → closed relief header'),
+ item('D-501','Grated aisle drainage','Containment',[-1.75,.1,5.12],[-1.75,4.6],'Long grating gives maintenance access to the illustrated floor drainage channel.','Floor drain channel'),
+ item('DOOR-01','Insulated access door','Access',[9.95,2,8.45],[9.6,6.9],'PIN-operated entry separates the stair enclosure from the process hall. Demo PIN is 2048.','Stair → process gallery'),
+ item('CR-501','Cable tray and pipe supports','Electrical',[0,5.1,7.7],[0,4.6],'Cable tray, brackets and supports carry services above the maintenance space.','MCC → field equipment')
+];
+export const stations=[
+ ['Feed and metering',[-10.7,.8],'DS-101'],['Reaction and circulation',[-8,.8],'R-101'],['Condensation',[-6,.8],'E-101'],['Blending',[-3.2,.8],'R-102'],['Cooling',[-.8,.8],'E-202'],['Holding',[2.3,.8],'V-201'],['Duplex filters',[4.5,.8],'F-301'],['Product transfer',[9.5,.8],'P-401'],['Packaging',[11.7,.8],'FL-401'],['Extraction',[8,4.6],'AHU-501'],['Utilities',[6,4.6],'AC-501'],['Electrical',[3.7,4.6],'MCC-02'],['Instrument air',[.2,4.6],'AIR-501'],['Utility cooling',[-3.1,4.6],'HX-501'],['Containment',[-4.6,4.6],'S-501'],['Phase separation',[-7.9,4.6],'V-104'],['Utility return',[-9.3,4.6],'UT-01'],['Isolation',[-11.5,4.6],'ESD-01'],['Dock',[9.4,5.1],null]
+];

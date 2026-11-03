@@ -1,6 +1,6 @@
 # Robot simulation sources for PlantScout
 
-Researched 2026-11-02. No robot has been added to the current browser environment.
+Researched 2026-11-02; updated 2026-11-03. An original browser rover is now implemented, with manual driving, a rendered camera, known-map route planning and simulated range rays. Webots/Gazebo physics are not integrated. No source robot model was copied.
 
 ## Source facts
 
