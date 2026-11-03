@@ -44,8 +44,6 @@ export function buildInterior(scene){
  for(let x=-12;x<13;x+=1.5){box(x,8.6,-8.04,.025,8.9,.03,deckSteel);for(const y of [5.1,9.1,12.7])box(x,y,-8,.07,.07,.025,deckSteel);}
  for(const z of [-6,-3,0,3,6])for(const x of [-13.2,13.2]){box(x,3.6,z,.05,.12,1.5,dark);pipe([x,3.8,z],[x,3.8,z+1.5],.025,deckSteel);}
  // Pipe bridges tie the visible bays into one plant rather than isolated displays.
- for(const [y,z,r] of [[6.3,-6.9,.13],[6.65,-6.5,.1],[7,-6.1,.09]]){pipe([-9,y,z],[12,y,z],r,metal);for(const x of [-8,-3,2,7,12]){pipe([x,y,z],[x,8.5,z],.02,dark);box(x,y+.08,z,.32,.08,.32,deckSteel);}}
- for(const [x,z] of [[-5.1,-2.6],[-.8,-2.6],[3.5,-2.6],[7.8,-2.6]]){pipe([x,2.05,z],[x,3.4,z],.09,metal);pipe([x,3.4,z],[x,3.4,-5.6],.09,metal);}
  // Front-wall service run: bunded utility vessels, instrument air, cable tray and drainage.
  // These continue the process language across the aisle while leaving a walkable route.
  for(const [height,radius,material] of [[2.85,.072,blue],[3.18,.065,metal],[3.52,.05,yellow]]){
@@ -118,7 +116,7 @@ export function buildInterior(scene){
  const particles=[];const puffCanvas=document.createElement('canvas');puffCanvas.width=puffCanvas.height=64;const pg=puffCanvas.getContext('2d'),grad=pg.createRadialGradient(32,32,0,32,32,32);grad.addColorStop(0,'#e4ebeac0');grad.addColorStop(1,'#e4ebea00');pg.fillStyle=grad;pg.fillRect(0,0,64,64);const puffTex=new T.CanvasTexture(puffCanvas);
  for(let i=0;i<28;i++){const p=new T.Sprite(new T.SpriteMaterial({map:puffTex,transparent:true,opacity:0,depthWrite:false}));scene.add(p);particles.push(p);}
  // Walking clearance keeps the visitor away from equipment bases and walls.
- const blocked=[[-12.8,12.8,-8,-1.25],[10.6,12.9,2.2,6.9],[-10.5,-5.3,5.65,7.6],[-4.4,-1.9,6.0,7.6],[-.4,.8,6.5,7.8],[2.9,4.5,7.1,7.9],[ -.4,1.9,2.5,3.7]];
+ const blocked=[[-12.8,12.8,-8,-1.25],[10.6,12.9,2.2,6.9],[-10.5,-5.3,5.65,7.6],[-4.4,-1.9,6.0,7.6],[-.4,.8,6.5,7.8],[2.9,4.5,7.1,7.9],[5,7.2,6.1,7.5],[ -.4,1.9,2.5,3.7]];
  const canWalk=(x,z)=>x>-12.7&&x<12.7&&z>-7.5&&z<7.85&&!blocked.some(([a,b,c,d])=>x>a-.18&&x<b+.18&&z>c-.18&&z<d+.18)&&![-11.2,-5.6,0,5.6,11.2].some(cx=>[-5.8,0].some(cz=>Math.hypot(x-cx,z-cz)<.52));
  function update(time,power,steam,dt,camera,showLabels=true){labels.forEach(o=>{const d=o.position.distanceTo(camera.position),scale=o.userData.labelScale,f=Math.min(1,d*.30/scale.x);o.visible=showLabels&&d<9;o.scale.copy(scale).multiplyScalar(f);});fan.rotation.z+=power*dt*8;mixers.forEach(r=>r.rotation.y+=power*dt*3);flowRotors.forEach(r=>r.rotation.z+=power*dt*4);equipment.panelStatusLights.forEach((l,i)=>{l.visible=power>.05||i%3===0;});particles.forEach((p,i)=>{const t=(time*.27+i/28)%1;p.position.set(-7.6+Math.sin(i*8+t*4)*t*.5,1.3+t*2.7,4.4-t*.35);p.scale.setScalar(.25+t*1.4);p.material.opacity=steam*Math.sin(t*Math.PI)*.23;});screenAge+=dt;if(screenAge<.2)return;screenAge=0;const g=screen.getContext('2d');g.fillStyle='#18232e';g.fillRect(0,0,512,256);g.fillStyle='#e7c477';g.font='24px monospace';g.fillText('MCC-01 / RESIN UNIT',24,42);g.font='38px monospace';g.fillText(power>.4?'PROCESS RUNNING':'STANDBY',24,105);g.font='20px monospace';g.fillText('CIRCULATION '+(power*12.8).toFixed(1)+' m3/h',24,165);g.fillText('EXTRACTION '+(power>.05?'ON':'OFF'),24,215);screenMap.needsUpdate=true;}
  // Batch fixed plant meshes while preserving moving assemblies and status lamps.
