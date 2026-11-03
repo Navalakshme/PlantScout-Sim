@@ -1,12 +1,333 @@
-<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#20252b"><title>PlantScout · Resin process basement</title><link rel="stylesheet" href="./styles.css?v=20261103r1"></head><body>
-<div id="viewport" aria-label="Chemical basement walkthrough"></div>
-<header><a class="brand" href="./">◈ <b>plantscout</b><span>RESIN WORKS / B1</span></a><div class="header-actions"><span class="tag">INTERACTIVE SIMULATION</span><button id="labels" aria-pressed="true">Labels on</button><button id="sound">Sound off</button><button id="help">Controls</button></div></header>
-<div id="loading">Preparing the basement…</div><div id="error" hidden>Unable to load the 3D environment. Check your connection and reload.</div>
-<section class="entry" id="entry"><span class="eyebrow">B1 / PROCESS ACCESS</span><button class="primary" id="descend">Descend to basement ↘</button></section>
-<section class="keypad panel" id="keypad" hidden><span class="eyebrow">B1 / ACCESS CONTROL</span><h2>Thermal access door</h2><p>Enter the four-digit demo access PIN.</p><form id="unlockForm"><label for="pin">Access PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" required><p id="pinMessage" role="status">Demo PIN: <strong>2048</strong></p><button class="primary" type="submit">Unlock & enter →</button></form><small>Local demo lock · not security authentication</small></section>
-<details class="plant panel" id="plant" hidden><summary>Plant controls <span>SIMULATED</span></summary><div class="plant-content"><div class="eyebrow">PROCESS CONTROL</div><h2>Resin process gallery</h2><div class="status"><i id="statusDot"></i><span id="status">Standby · ready to start</span></div><p id="description">Power ventilation and circulation to start the simulated process.</p><button id="start" class="primary">Start plant sequence</button><div class="metrics"><div><span>Circulation</span><b id="flow">0.0 <small>m³/h</small></b></div><div><span>Jacket temperature</span><b id="temperature">24 <small>°C</small></b></div><div><span>Line pressure</span><b id="pressure">0.0 <small>bar</small></b></div><div><span>Extraction</span><b id="extraction">OFF</b></div></div><div class="sequence"><span id="s1">01 Ventilation</span><span id="s2">02 Circulation</span><span id="s3">03 Mixing</span></div><div class="controls"><button id="steam" disabled>Utility steam demonstration</button><button id="stop" class="danger" disabled>Stop process</button></div><p class="micro">Synthetic operating values. Steam appears only at the utility demonstration vent.</p></div></details>
-<footer><div><span class="eyebrow" id="location">ACCESS STAIR / B1</span><p id="hint">A closed industrial interior, explored at human scale.</p></div><button id="return" hidden>Return to stair</button></footer>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlantScout — Alkyd-Resin Basement Simulation & Robot Inspection</title>
+  <link rel="stylesheet" href="./styles.css?v=20261103">
+</head>
+<body class="dark-theme">
+  <!-- Top App Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-title">PlantScout</span>
+      <span class="brand-sub">Basement B1 / Alkyd-Resin Simulation</span>
+    </div>
 
-<dialog id="helpDialog"><button id="closeHelp" aria-label="Close controls">×</button><span class="eyebrow">EXPLORE THE BASEMENT</span><h2>Move through the works.</h2><p>Drag across the scene to look around. Hold <b>W A S D</b> to walk. Move through the connected plant instead of jumping between viewpoints. Toggle equipment labels in the header. Open Equipment to search every assembly, read its function, and walk to it. Open Inspection robot for manual driving, a camera view and the automatic inspection route. In robot views, W/S drives, A/D turns and Space stops.</p><p>Expand Plant controls to start ventilation, pumps and mixing in sequence. Sound activates when you enable it. Utility steam runs briefly and clears automatically.</p><p>Insulated wall and door finishes are visual representations. This is a simulated process, not an engineered or certified facility.</p><button class="primary" id="helpDone">Got it</button></dialog>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script><script>window.addEventListener('error',()=>{if(!document.getElementById('loading').hidden){document.getElementById('loading').hidden=true;document.getElementById('error').hidden=false;}});setTimeout(()=>{if(!document.getElementById('loading').hidden){document.getElementById('loading').hidden=true;document.getElementById('error').hidden=false;}},20000);</script><script type="module" src="./app.js?v=20261103r3"></script>
-</body></html>
+    <div class="topbar-center">
+      <div class="stage-indicator">
+        <span class="stage-tag">PROCESS STAGE</span>
+        <b id="topbar-stage">01_STANDBY: Standby / Pre-Start</b>
+        <span id="topbar-stage-desc" class="micro">Plant idle, verifying utility readiness.</span>
+      </div>
+
+      <div class="batch-indicators">
+        <span class="batch-pill reactor" id="batch-reactor-pill" title="Current Batch Cooking in Reactor R-101">Batch #B-109 (Reactor)</span>
+        <span class="batch-pill downstream" id="batch-downstream-pill" title="Distinct Batch in Holding/Packaging">Batch #B-108 (Downstream)</span>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div id="ai-status-pill" class="status-pill unconfigured" title="Checking Meta Llama AI model status...">
+        Meta AI: Checking...
+      </div>
+      <div class="status-pill info">
+        Robot: <span id="topbar-inspection-status">Docked</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Application Layout: Sidebar + Main Content -->
+  <div class="app-layout">
+    <!-- Fixed Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="scenario-select">OPERATING SCENARIO</label>
+        <select id="scenario-select" class="sidebar-select">
+          <option value="normal">Normal Basement (Seed 42)</option>
+          <option value="defective">Defective Basement (Seed 1337)</option>
+        </select>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-label">NAVIGATION & VIEWS</div>
+        <button data-view="overview" class="nav-btn">
+          <span class="nav-icon">📊</span> 1. Overview
+        </button>
+        <button data-view="explore" class="nav-btn active">
+          <span class="nav-icon">🧭</span> 2. Explore complete basement
+        </button>
+        <button data-view="inspection" class="nav-btn">
+          <span class="nav-icon">🤖</span> 3. Start inspection
+        </button>
+        <button data-view="report" class="nav-btn">
+          <span class="nav-icon">📋</span> 4. Inspection report
+        </button>
+        <button data-view="pfd" class="nav-btn">
+          <span class="nav-icon">🔄</span> 5. Equipment and process flow
+        </button>
+      </nav>
+
+      <div class="sidebar-section sim-controls">
+        <div class="sidebar-label">PROCESS ENGINE (FATTY-ACID ROUTE)</div>
+        <div class="btn-group">
+          <button id="btn-prev-stage" class="btn-sm" title="Previous Stage">&larr; Prev</button>
+          <button id="btn-next-stage" class="btn-sm" title="Next Stage">Next &rarr;</button>
+        </div>
+        <button id="btn-auto-advance" class="btn-sm">Auto-Advancing: OFF</button>
+        <button id="btn-pause-sim" class="btn-sm">Pause Sim</button>
+        <button id="btn-esd" class="btn-danger">EMERGENCY SHUTDOWN</button>
+      </div>
+
+      <div class="sidebar-footer">
+        <small class="micro">Educational Alkyd Resin Software Simulation. Not an engineered plant design.</small>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- 3D WebGL Viewport Container -->
+      <div class="viewport-container">
+        <div id="viewport" aria-label="Interactive 3D Basement Viewport"></div>
+
+        <!-- Overlaid View Controls -->
+        <div class="viewport-overlay top-left">
+          <div class="cam-modes">
+            <button class="view-btn active" data-cam="walk">Walk View</button>
+            <button class="view-btn" data-cam="follow">Follow Robot</button>
+            <button class="view-btn" data-cam="camera">Masthead Camera</button>
+          </div>
+        </div>
+
+        <div class="viewport-overlay top-right">
+          <span class="subtle-badge">Central Aisle: Z = 0 &bull; 32m &times; 20m &times; 7.5m</span>
+        </div>
+
+        <!-- Robot Driving HUD overlay (visible in Follow/Camera modes) -->
+        <div id="robot-driving-hud" class="viewport-overlay bottom-left hidden">
+          <div class="hud-box">
+            <b>SCOUT-01 Manual Controls</b>
+            <p class="micro">W/S: Drive &bull; A/D: Steer &bull; Drag: Camera Pan/Tilt</p>
+            <div class="drive-grid">
+              <button id="drive-fwd" class="btn-hud">&uarr;</button>
+              <div class="drive-row">
+                <button id="drive-left" class="btn-hud">&larr;</button>
+                <button id="drive-rev" class="btn-hud">&darr;</button>
+                <button id="drive-right" class="btn-hud">&rarr;</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact Telemetry / Progress Strip -->
+      <section class="telemetry-bar">
+        <div class="telem-progress-track">
+          <div id="telem-stage-progress" class="telem-progress-fill" style="width: 8%;"></div>
+        </div>
+        <div class="telem-metrics-grid">
+          <div class="metric-cell">
+            <span class="m-label">R-101 Process Temp</span>
+            <b id="telem-r101-temp" class="m-val">24.0 °C</b>
+          </div>
+          <div class="metric-cell">
+            <span class="m-label">R-101 Level</span>
+            <b id="telem-r101-level" class="m-val">0.0 %</b>
+          </div>
+          <div class="metric-cell">
+            <span class="m-label">BL-301 Blender Temp</span>
+            <b id="telem-bl301-temp" class="m-val">24.0 °C</b>
+          </div>
+          <div class="metric-cell">
+            <span class="m-label">P-301 Bearing Temp</span>
+            <b id="telem-p301-brg" class="m-val badge-normal">52.3 °C</b>
+          </div>
+          <div class="metric-cell">
+            <span class="m-label">F-301 Filter DP</span>
+            <b id="telem-f301-dp" class="m-val badge-normal">0.42 bar</b>
+          </div>
+          <div class="metric-cell">
+            <span class="m-label">WS-401 Container Mass</span>
+            <b id="telem-container-mass" class="m-val">18.5 kg</b>
+          </div>
+          <div class="metric-cell">
+            <span class="m-label">Simulated Acid Value</span>
+            <b id="telem-acid-val" class="m-val">88.0 mg KOH/g</b>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dynamic Feature Panels (Overview, Equipment Drawer, Inspection Skid, PFD) -->
+      <div id="overview-panel" class="sub-panel hidden">
+        <h2>Process Overview — Solvent-Assisted Fatty-Acid Alkyd Route</h2>
+        <p>This simulation illustrates the synthesis of an alkyd polyester resin from tall oil fatty acids, polyol (glycerol/pentaerythritol), and phthalic anhydride solids in the presence of xylene azeotropic solvent.</p>
+        <div class="overview-grid">
+          <div class="overview-card">
+            <h4>Reaction & Azeotropic Overhead</h4>
+            <p>Water formed during esterification condenses in horizontal condenser E-201 and decants in separator V-201. Solvent returns by gravity to R-101; reaction water accumulates in closed receiver TK-201.</p>
+          </div>
+          <div class="overview-card">
+            <h4>Downstream Thinning & Packaging</h4>
+            <p>Following simulated endpoint release, resin is transferred through P-201 to blender BL-301, thinned with solvent, cooled via cooling water, polished through filter F-301, and staged in tank TK-401 for container filling FL-401.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equipment Directory Drawer (Explore mode) -->
+      <aside id="equipment-drawer" class="drawer-panel">
+        <div class="drawer-header">
+          <h3>Equipment Directory (37 Assemblies)</h3>
+          <div class="drawer-filters">
+            <input type="text" id="eq-search-input" placeholder="Search tag, name or function..." class="search-input">
+            <select id="eq-category-select" class="sidebar-select">
+              <option value="All">All Subsystems</option>
+              <option value="Feed Preparation">Feed Preparation</option>
+              <option value="Reaction">Reaction</option>
+              <option value="Overhead Recovery">Overhead Recovery</option>
+              <option value="Transfer">Transfer</option>
+              <option value="Blending">Blending</option>
+              <option value="Filtration">Filtration</option>
+              <option value="Product Holding">Product Holding</option>
+              <option value="Packaging">Packaging</option>
+              <option value="Utilities">Utilities</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Ventilation">Ventilation</option>
+              <option value="Containment">Containment</option>
+              <option value="Safety">Safety</option>
+              <option value="Access">Access</option>
+              <option value="Robotics">Robotics</option>
+            </select>
+          </div>
+        </div>
+        <div id="eq-list-container" class="eq-grid"></div>
+      </aside>
+
+      <!-- Inspection Controls Panel (Inspection mode) -->
+      <div id="inspection-panel" class="sub-panel hidden">
+        <div class="inspection-actions-bar">
+          <button id="btn-start-inspection" class="btn-primary">▶ Start Autonomous Inspection</button>
+          <button id="btn-pause-inspection" class="btn-secondary">⏸ Pause Route</button>
+          <button id="btn-reset-dock" class="btn-secondary">↺ Reset to Dock</button>
+          <label class="speed-label">
+            Route Speed:
+            <select id="inspection-speed-select" class="sidebar-select">
+              <option value="1">1&times; (Demonstration)</option>
+              <option value="2.5" selected>2.5&times; (Standard)</option>
+              <option value="5">5&times; (Fast)</option>
+            </select>
+          </label>
+        </div>
+        <p class="micro">Robot SCOUT-01 will travel along collision-checked central and maintenance aisles, stopping at 19 stations to capture camera frames, inspect floor zones for suspected spills, and query instrument telemetry.</p>
+      </div>
+
+      <!-- Process Flow Diagram Panel (PFD mode) -->
+      <div id="pfd-panel" class="sub-panel hidden">
+        <div id="pfd-container"></div>
+      </div>
+
+      <!-- Equipment Details Inspection Drawer / Modal -->
+      <div id="equipment-details-modal" class="modal-drawer hidden">
+        <div class="modal-header">
+          <h3 id="modal-eq-title">R-101 Jacketed Alkyd Reactor</h3>
+          <button id="btn-close-eq-drawer" class="btn-close" aria-label="Close details">&times;</button>
+        </div>
+        <div class="modal-content">
+          <span id="modal-eq-group" class="badge-subsystem">Reaction</span>
+          <p id="modal-eq-fn" class="modal-desc"></p>
+          <div id="modal-eq-conn" class="modal-conn"></div>
+          <h4>Installed Instrumentation & Telemetry</h4>
+          <div id="modal-eq-instruments" class="modal-instruments-list"></div>
+        </div>
+      </div>
+
+      <!-- Complete Inspection Report (Below Viewport) -->
+      <section id="report-section" class="inspection-report-section">
+        <div class="report-header">
+          <div>
+            <span class="report-eyebrow">ROBOT INSPECTION AUDIT REPORT</span>
+            <h2>Basement Survey Findings &amp; Evidence Log</h2>
+          </div>
+          <div class="report-actions">
+            <button id="btn-download-json" class="btn-secondary">📥 Export JSON Report</button>
+            <button id="btn-print-report" class="btn-secondary">🖨 Print / PDF Export</button>
+          </div>
+        </div>
+
+        <!-- Report Metadata Card -->
+        <div class="report-meta-grid">
+          <div class="meta-card">
+            <span class="meta-label">Inspection ID</span>
+            <b id="rep-id">INSP-PENDING</b>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Selected Scenario</span>
+            <b id="rep-scenario">NORMAL BASEMENT</b>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Status</span>
+            <b id="rep-status">Not Started</b>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Start / End Time</span>
+            <span><b id="rep-start">--:--</b> to <b id="rep-end">--:--</b></span>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Route Coverage</span>
+            <b id="rep-coverage-stat">0/19 Stations (0%)</b>
+          </div>
+          <div class="meta-card">
+            <span class="meta-label">Observed Equipment</span>
+            <b id="rep-observed-stat">0/37 Assemblies</b>
+          </div>
+        </div>
+
+        <!-- Grounded Overall Conclusion Banner -->
+        <div id="rep-conclusion" class="report-conclusion conclusion-normal">
+          No configured anomalies observed in inspected areas.
+        </div>
+
+        <!-- Evidence Findings List -->
+        <div class="report-subsection">
+          <h3>Observed Station Findings &amp; Visual Evidence</h3>
+          <div id="rep-findings-list" class="findings-grid">
+            <p class="micro">Launch "Start Inspection" to gather visual evidence frames and analyze equipment condition.</p>
+          </div>
+        </div>
+
+        <!-- Equipment Coverage Breakdown Table -->
+        <div class="report-subsection">
+          <h3>Equipment Coverage Verification (All 37 Assemblies)</h3>
+          <div class="table-wrapper">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Equipment ID</th>
+                  <th>Name</th>
+                  <th>Subsystem Group</th>
+                  <th>Inspection Status</th>
+                </tr>
+              </thead>
+              <tbody id="rep-coverage-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="report-disclaimer">
+          <p><b>Educational Software Simulation Notice:</b> This report is generated from an illustrative browser simulation. It is not an operating recipe, an engineered plant design, or evidence that a real solvent-processing basement is safe or compliant. Do not declare the real environment safe for human entry.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
