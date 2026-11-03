@@ -265,7 +265,7 @@ export function createRover(T, scene, onStationStop) {
     },
 
     aimCamera(pan, tilt) {
-      panAngle = T.MathUtils.clamp(pan, -Math.PI * 0.8, Math.PI * 0.8);
+      panAngle = T.MathUtils.clamp(pan, -Math.PI, Math.PI);
       tiltAngle = T.MathUtils.clamp(tilt, -Math.PI * 0.25, Math.PI * 0.35);
       cameraHead.rotation.y = panAngle;
       cameraHead.rotation.x = tiltAngle;
@@ -338,9 +338,9 @@ export function createRover(T, scene, onStationStop) {
           const dz = currentStation.lookAt[2] - root.position.z;
           const dy = currentStation.lookAt[1] - 1.15;
           const targetHeading = Math.atan2(-dx, -dz);
-          const relPan = targetHeading - root.rotation.y;
+          const relPan = Math.atan2(Math.sin(targetHeading - root.rotation.y), Math.cos(targetHeading - root.rotation.y));
           const relTilt = Math.atan2(dy, Math.hypot(dx, dz));
-          this.aimCamera(relPan, -relTilt);
+          this.aimCamera(relPan, relTilt);
         }
 
         // Trigger station inspection callback (captures frame, checks telemetry, triggers Meta analysis)
