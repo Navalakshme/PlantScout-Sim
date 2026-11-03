@@ -5,6 +5,7 @@ export class MetaInspectionClient {
     this.requestCounter = 0;
     this.stationCounter = 0;
     this.maxRequestsPerInspection = 10;
+    this.consecutiveFailures = 0;
   }
 
   async checkServerStatus() {
@@ -21,6 +22,7 @@ export class MetaInspectionClient {
   resetBudget() {
     this.requestCounter = 0;
     this.stationCounter = 0;
+    this.consecutiveFailures = 0;
   }
 
   checkTelemetry(payload) {
@@ -56,7 +58,8 @@ export class MetaInspectionClient {
     const hasAlarm = telemetryFinding.severity !== 'NORMAL';
     const sampleStation = stationNumber > 0 && stationNumber % 6 === 0;
     const mustInspectImage = payload.stationId === 'STATION-17';
-    if (!this.status.configured || this.requestCounter >= this.maxRequestsPerInspection || !(hasAlarm || sampleStation || mustInspectImage)) {
+    if (!this.status.configured || this.consecutiveFailures >= 2 || this.requestCounter >= this.maxRequestsPerInspection || !(hasAlarm || sampleStation || mustInspectImage)) {
+      if (this.consecutiveFailures >= 2) telemetryFinding.uncertainty += ' Meta image checks paused after repeated errors to protect credits.';
       return { success: true, aiConfigured: false, finding: telemetryFinding };
     }
     this.requestCounter++;
@@ -65,6 +68,7 @@ export class MetaInspectionClient {
       if (!response.ok) throw new Error(`Meta request returned HTTP ${response.status}`);
       const result = await response.json();
       if (!result.finding || !Array.isArray(result.finding.evidenceIds)) throw new Error('Invalid Meta finding');
+      this.consecutiveFailures = 0;
       result.finding.evidenceIds = [payload.evidenceId];
       // Instrument alarms are deterministic and must survive a missed visual inference.
       if (telemetryFinding.severity === 'CRITICAL' && result.finding.severity !== 'CRITICAL') {
@@ -73,6 +77,7 @@ export class MetaInspectionClient {
       }
       return result;
     } catch (error) {
+      this.consecutiveFailures++;
       telemetryFinding.uncertainty += ` Meta image request failed: ${error.message}.`;
       return { success: false, aiConfigured: false, finding: telemetryFinding };
     }
