@@ -23,7 +23,7 @@ export const SCENARIOS = {
         id: 'DEF-01-SPILL',
         type: 'Liquid Floor Spill',
         targetEq: 'P-301',
-        location: [4.8, 0.005, -3.2],
+        location: [4.8, 0.005, -0.7],
         footprint: [1.8, 1.2],
         description: 'Uncontained dark amber solvent/oil pooling spreading across concrete floor near P-301 pump base.',
         severity: 'CRITICAL',
@@ -57,7 +57,7 @@ export const SCENARIOS = {
     p301BearingTemp: 108.4,
     f301FilterDp: 2.85,
     spill: {
-      position: [4.8, 0.005, -3.2],
+      position: [4.8, 0.005, -0.7],
       size: [1.8, 1.2],
       rotationY: 0.25
     }
