@@ -1,6 +1,6 @@
 # PlantScout: Alkyd-Resin Process Basement Simulation & Robot Inspection
 
-PlantScout is a connected, interactive industrial simulation of an enclosed alkyd-resin manufacturing basement. It combines a deterministic 12-stage batch chemical process simulation, an exact 37-assembly equipment register, a shared topological connection graph driving physical 3D piping, two seeded operating scenarios (Normal vs Defective), an original 4-wheel mobile inspection robot (SCOUT-01), and a server-side Meta Llama vision/reasoning inspection workflow with structured audit reporting.
+PlantScout is an interactive industrial simulation of an enclosed alkyd-resin manufacturing basement. It combines a deterministic 12-stage process simulation, a 37-assembly equipment register, 3D piping, two seeded scenarios, an original mobile inspection robot (SCOUT-01), and structured audit reporting. The published Vercel site does not yet expose the Meta analysis endpoints.
 
 ---
 
@@ -26,7 +26,7 @@ The application simulates **solvent-assisted batch alkyd-resin manufacture via t
   - `Z`: North (&minus;) to South (+) [&minus;10.0m to +10.0m]
   - `Y`: Elevation above floor [Floor `Y = 0.0m`]
   - `South Entrance`: Centered at `X = 0.0m, Z = +9.8m`
-- **Central Inspection Aisle**: Located around `Z = 0.0m`, approximately 3.4 metres wide (spanning `Z = -1.7m` to `Z = +1.7m`). Completely unobstructed for the entire 32m length.
+- **Central Inspection Aisle**: The two equipment banks are drawn closer around `Z = 0`. The core route from `Z = -0.75m` to `Z = +0.75m` is collision-free along the main hall; maintenance approaches branch off it.
 - **Equipment Placement**:
   - *Feed Preparation*: Northwest (`X: -13.0 to -7.5, Z: -5.5 to -3.5`)
   - *Reaction & Overhead*: North center (`X: -6.0, Z: -5.0 to -7.6`)
@@ -38,6 +38,8 @@ The application simulates **solvent-assisted batch alkyd-resin manufacture via t
   - *Electrical & Control Suite*: South (`X: 3.5 to 8.5, Z: 6.5`)
   - *Ventilation & Sump*: Southeast (`X: 10.0 to 14.0, Z: 3.0 to 6.5`)
   - *Robot Dock*: South entrance (`X: 0.0, Z: 7.8`)
+- **Entrance**: The south vestibule opens through a PIN-controlled demonstration door. Enter `2048`; movement pauses inside until the controls guide is dismissed. The left sidebar can reopen that guide.
+- **On-equipment displays**: Equipment signs show the assembly tag, name and temperature in both scenarios. A red display indicates a configured temperature alarm. Where no temperature sensor exists, the value is explicitly labelled simulated surface temperature.
 - **External Boundaries**:
   - Bulk solvent storage, thermal fluid combustion heater, cooling tower, and waste/vapour treatment reside outside the basement shell, connected via labelled wall terminals: `EXT-SOLVENT`, `EXT-THERMAL`, `EXT-COOLING`, `EXT-VAPOUR`, `EXT-WASTE`.
 
@@ -138,13 +140,8 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
   - `GET /api/status`: Queries model readiness and configuration state.
   - `POST /api/analyze-station`: Accepts evidence payloads (`{ inspectionId, stationId, equipmentIds, cameraImageBase64, telemetry, thresholds, evidenceId }`).
   - `POST /api/synthesize-report`: Synthesizes final inspection audit conclusions.
-- **Live Meta Model Support**:
-  - When `META_API_KEY`, `LLAMA_API_KEY`, or `OPENROUTER_API_KEY` is set on the server, requests are dispatched to Meta Llama Vision (`meta-llama/llama-3.2-11b-vision-instruct`) and Meta Llama Reasoning (`meta-llama/llama-3.3-70b-instruct`).
-  - Prompts instruct the model to analyze floor pooling, equipment condition, and instrument comparisons without leaking ground truth or scenario defect answers.
-  - Responses are validated against the strict inspection schema. References to non-existent evidence IDs are rejected.
-- **Deterministic Fallback (When API Key is Unset)**:
-  - If no key is set, the server explicitly returns `aiConfigured: false`, sets the status pill to `Meta AI: Unconfigured (Deterministic Telemetry Mode)`, provides configuration instructions, and executes deterministic rule-based evaluation.
-  - **Zero hallucinated or canned text presented as successful AI responses**.
+- **Current deployment status**: `server.cjs` is a local Node server; Vercel does not run it as an API Function. The live `/api/status` route returns 404, so the production `META_API_KEY` cannot be used by the inspection flow yet. The local server also targets the legacy Llama endpoint and needs migration to Meta Model API before live AI testing.
+- **Fallback limitation**: The current offline report uses simulated telemetry and a seeded spill flag. Some fallback wording incorrectly implies completed visual inspection and zero uncertainty. Treat those findings as demonstration output, not verified camera analysis.
 
 ---
 
@@ -156,9 +153,10 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
   3. *Start inspection*: Resets robot to dock, creates a fresh inspection ID, and executes the autonomous route.
   4. *Inspection report*: Displays the full audit report below the viewport.
   5. *Equipment and process flow*: Interactive Process Flow Diagram (PFD) showing all equipment and upstream/downstream connections.
+- **Controls & movement**: Opens the movement guide after entry.
 - **Compact Telemetry Bar**: Live stage progress %, R-101 temp & level, BL-301 temp, P-301 bearing temp, F-301 filter DP, container mass, and simulated acid value.
 - **Inspection Audit Report**:
-  - Metadata cards: Inspection ID, Scenario, Timings, Route Coverage (20/20 Stations), Observed Equipment (37 Assemblies).
+  - Metadata cards: Inspection ID, Scenario, Timings, Route Coverage (20/20 Stations), and actual observed equipment (19/37 on the current route).
   - Grounded conclusion banner with color coding.
   - Visual findings cards with camera frame thumbnails, measurement comparisons, confidence/uncertainty, and recommended follow-up.
   - **"Locate & Highlight in 3D"**: Clicking any finding smoothly flies the camera to the equipment or floor spill and draws a glowing bounding highlight box in the 3D scene!
