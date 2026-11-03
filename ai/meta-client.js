@@ -1,176 +1,80 @@
-// PlantScout - Meta Model Client Integration
-// Communicates with server-side AI endpoints, handles validation, and manages fallbacks.
-
+// Separates measured simulation telemetry from optional Meta camera analysis.
 export class MetaInspectionClient {
   constructor() {
-    this.status = {
-      configured: false,
-      model: 'meta-llama/llama-3.2-11b-vision-instruct',
-      reasoningModel: 'meta-llama/llama-3.3-70b-instruct',
-      statusMessage: 'Checking server AI connection...'
-    };
+    this.status = { configured: false, model: 'muse-spark-1.3', statusMessage: 'Checking Meta connection…' };
     this.requestCounter = 0;
-    this.maxRequestsPerInspection = 25; // Budget constraint
+    this.stationCounter = 0;
+    this.maxRequestsPerInspection = 10;
   }
 
   async checkServerStatus() {
     try {
-      const res = await fetch('/api/status');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      this.status = data;
-      return this.status;
-    } catch (err) {
-      this.status = {
-        configured: false,
-        model: 'meta-llama/llama-3.2-11b-vision-instruct',
-        reasoningModel: 'meta-llama/llama-3.3-70b-instruct',
-        statusMessage: `AI Endpoint Offline (${err.message}). Deterministic analysis active.`
-      };
-      return this.status;
+      const response = await fetch('/api/status');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      this.status = await response.json();
+    } catch {
+      this.status = { configured: false, model: 'muse-spark-1.3', statusMessage: 'Meta endpoint unavailable; telemetry checks only.' };
     }
+    return this.status;
+  }
+
+  resetBudget() {
+    this.requestCounter = 0;
+    this.stationCounter = 0;
+  }
+
+  checkTelemetry(payload) {
+    let severity = 'NORMAL';
+    const comparisons = [];
+    const alarms = [];
+    for (const [tag, reading] of Object.entries(payload.telemetry || {})) {
+      const value = Number(reading.value);
+      if (!Number.isFinite(value)) continue;
+      const alarm = (reading.alarmMax != null && value >= reading.alarmMax) || (reading.alarmMin != null && value <= reading.alarmMin) || reading.state === 'ALARM';
+      const warning = (reading.warnMax != null && value >= reading.warnMax) || (reading.warnMin != null && value <= reading.warnMin) || reading.state === 'WARNING';
+      comparisons.push(`${tag}: ${value} ${reading.unit || ''}${reading.alarmMax != null ? ` (alarm ≥${reading.alarmMax})` : ''}`);
+      if (alarm) { severity = 'CRITICAL'; alarms.push(`${tag} is beyond its simulated alarm limit`); }
+      else if (warning) { if (severity !== 'CRITICAL') severity = 'WARNING'; alarms.push(`${tag} is beyond its simulated warning limit`); }
+    }
+    return {
+      inspectionId: payload.inspectionId,
+      equipmentOrLocation: payload.equipmentIds?.[0] || payload.stationName,
+      evidenceIds: [payload.evidenceId],
+      observation: alarms.length ? alarms.join('; ') : 'Recorded simulated instrument readings; camera frame has not been interpreted by AI.',
+      measurementComparison: comparisons.join('; ') || 'No instrument measurement at this assembly.',
+      severity,
+      confidence: 0,
+      uncertainty: 'Visual condition unknown unless a separate Meta image finding is available. Sensor values are simulated.',
+      suggestedFollowUp: alarms.length ? 'Review the indicated equipment and camera image.' : 'Continue route; review photo manually if needed.',
+      source: 'Simulation telemetry only'
+    };
   }
 
   async analyzeStationEvidence(payload) {
-    // payload: { inspectionId, stationId, stationName, equipmentIds, cameraImageBase64, telemetry, thresholds, evidenceId }
+    const telemetryFinding = this.checkTelemetry(payload);
+    const stationNumber = this.stationCounter++;
+    const hasAlarm = telemetryFinding.severity !== 'NORMAL';
+    const sampleStation = stationNumber > 0 && stationNumber % 6 === 0;
+    const mustInspectImage = payload.stationId === 'STATION-17';
+    if (!this.status.configured || this.requestCounter >= this.maxRequestsPerInspection || !(hasAlarm || sampleStation || mustInspectImage)) {
+      return { success: true, aiConfigured: false, finding: telemetryFinding };
+    }
     this.requestCounter++;
-    if (this.requestCounter > this.maxRequestsPerInspection) {
-      return {
-        success: false,
-        status: 'budget_capped',
-        finding: {
-          inspectionId: payload.inspectionId,
-          equipmentOrLocation: payload.equipmentIds[0] || 'Unknown',
-          evidenceIds: [payload.evidenceId],
-          observation: 'Inspection request budget cap reached (max 25 requests per run).',
-          measurementComparison: 'Telemetry gathered; AI inference deferred.',
-          severity: 'NORMAL',
-          confidence: 0.5,
-          uncertainty: 'Budget limit hit.',
-          suggestedFollowUp: 'Review telemetry table.'
-        }
-      };
-    }
-
     try {
-      const res = await fetch('/api/analyze-station', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
+      const response = await fetch('/api/analyze-station', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!response.ok) throw new Error(`Meta request returned HTTP ${response.status}`);
+      const result = await response.json();
+      if (!result.finding || !Array.isArray(result.finding.evidenceIds)) throw new Error('Invalid Meta finding');
+      result.finding.evidenceIds = [payload.evidenceId];
+      // Instrument alarms are deterministic and must survive a missed visual inference.
+      if (telemetryFinding.severity === 'CRITICAL' && result.finding.severity !== 'CRITICAL') {
+        result.finding.severity = 'CRITICAL';
+        result.finding.measurementComparison += `; ${telemetryFinding.measurementComparison}`;
       }
-
-      const result = await res.json();
-
-      // Validate schema
-      if (result.finding) {
-        this.validateFindingSchema(result.finding, payload.evidenceId);
-      }
-
       return result;
-    } catch (err) {
-      console.warn('[MetaClient] Analysis call failed, falling back to deterministic check:', err.message);
-      return {
-        success: false,
-        status: 'failed',
-        error: err.message,
-        finding: this.generateDeterministicFallback(payload)
-      };
+    } catch (error) {
+      telemetryFinding.uncertainty += ` Meta image request failed: ${error.message}.`;
+      return { success: false, aiConfigured: false, finding: telemetryFinding };
     }
-  }
-
-  async synthesizeFinalReport(reportPayload) {
-    try {
-      const res = await fetch('/api/synthesize-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reportPayload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      return {
-        success: false,
-        error: err.message,
-        synthesis: null
-      };
-    }
-  }
-
-  validateFindingSchema(finding, expectedEvidenceId) {
-    const required = [
-      'inspectionId',
-      'equipmentOrLocation',
-      'observation',
-      'evidenceIds',
-      'measurementComparison',
-      'severity',
-      'confidence',
-      'uncertainty',
-      'suggestedFollowUp'
-    ];
-
-    for (const key of required) {
-      if (finding[key] === undefined || finding[key] === null) {
-        finding[key] = key === 'confidence' ? 0.8 : 'Unspecified';
-      }
-    }
-
-    // Reject references to non-existent evidence IDs
-    if (!Array.isArray(finding.evidenceIds) || !finding.evidenceIds.includes(expectedEvidenceId)) {
-      finding.evidenceIds = [expectedEvidenceId];
-    }
-
-    // Normalize severity enum
-    const validSeverities = ['NORMAL', 'WARNING', 'CRITICAL', 'UNKNOWN'];
-    if (!validSeverities.includes(finding.severity)) {
-      finding.severity = 'UNKNOWN';
-    }
-  }
-
-  generateDeterministicFallback(payload) {
-    // Pure deterministic rule-based evaluation when AI is offline or key missing
-    let hasAlarm = false;
-    let hasWarning = false;
-    let obs = 'Station visual inspection complete; normal baseline observed.';
-    let comparison = 'All station instrument readings within demonstration tolerances.';
-    let severity = 'NORMAL';
-    let followUp = 'Routine monitoring per schedule.';
-
-    // Check telemetry values against stage thresholds
-    if (payload.telemetry) {
-      for (const [tag, reading] of Object.entries(payload.telemetry)) {
-        if (reading.state === 'ALARM' || (reading.alarmMax && reading.value >= reading.alarmMax)) {
-          hasAlarm = true;
-          severity = 'CRITICAL';
-          obs = `Simulated alarm condition on ${tag}: value (${reading.value} ${reading.unit}) exceeds demonstration alarm limit.`;
-          comparison = `${reading.value} ${reading.unit} vs Alarm threshold ${reading.alarmMax} ${reading.unit}.`;
-          followUp = `Isolate equipment ${payload.equipmentIds[0] || 'target'} and conduct immediate mechanical verification.`;
-          break;
-        } else if (reading.state === 'WARNING' || (reading.warnMax && reading.value >= reading.warnMax)) {
-          hasWarning = true;
-          severity = 'WARNING';
-          obs = `Warning threshold reached on ${tag}: value (${reading.value} ${reading.unit}) exceeds warning limit.`;
-          comparison = `${reading.value} ${reading.unit} vs Warning threshold ${reading.warnMax} ${reading.unit}.`;
-          followUp = `Monitor trend during next inspection cycle.`;
-        }
-      }
-    }
-
-    return {
-      inspectionId: payload.inspectionId,
-      equipmentOrLocation: payload.equipmentIds[0] || payload.stationName,
-      evidenceIds: [payload.evidenceId],
-      observation: obs,
-      measurementComparison: comparison,
-      severity,
-      confidence: 1.0,
-      uncertainty: 'Zero sensor uncertainty; AI vision model offline / unconfigured.',
-      suggestedFollowUp: followUp,
-      isDeterministic: true
-    };
   }
 }
