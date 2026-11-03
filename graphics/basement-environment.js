@@ -4,10 +4,33 @@ import { galleryZ } from '../data/layout.js';
 // Central inspection aisle around Z = 0, ~3.4m wide. Floor Y = 0.
 
 export function buildBasementEnvironment(T, scene) {
+  function concreteTexture(base, seed) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, 256, 256);
+    let state = seed;
+    const random = () => { state = (1664525 * state + 1013904223) >>> 0; return state / 4294967296; };
+    for (let i = 0; i < 9000; i++) {
+      const light = random() > 0.47;
+      ctx.fillStyle = light ? `rgba(226,230,229,${(random() * 0.045).toFixed(3)})` : `rgba(10,18,22,${(random() * 0.055).toFixed(3)})`;
+      const size = 0.4 + random() * 2.2;
+      ctx.fillRect(random() * 256, random() * 256, size, size);
+    }
+    const texture = new T.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = T.RepeatWrapping;
+    texture.repeat.set(8, 5);
+    texture.colorSpace = T.SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
+  }
+  const floorTexture = concreteTexture('#747a7c', 1729);
+  const wallTexture = concreteTexture('#666b6c', 3811);
   const materials = {
-    floor: new T.MeshStandardMaterial({ color: 0x5d6367, roughness: 0.65, metalness: 0.08 }),
+    floor: new T.MeshStandardMaterial({ map: floorTexture, color: 0xb8babb, roughness: 0.70, metalness: 0.02 }),
     curb: new T.MeshStandardMaterial({ color: 0x5a5e61, roughness: 0.72, metalness: 0.08 }),
-    wall: new T.MeshStandardMaterial({ color: 0x484b4d, roughness: 0.85, metalness: 0.05 }),
+    wall: new T.MeshStandardMaterial({ map: wallTexture, color: 0x9b9d9e, roughness: 0.88, metalness: 0.02 }),
     ceiling: new T.MeshStandardMaterial({ color: 0x3d4042, roughness: 0.90, metalness: 0.05 }),
     steel: new T.MeshStandardMaterial({ color: 0x7a838a, roughness: 0.45, metalness: 0.75 }),
     steelDark: new T.MeshStandardMaterial({ color: 0x2b3136, roughness: 0.60, metalness: 0.55 }),
@@ -15,6 +38,7 @@ export function buildBasementEnvironment(T, scene) {
     aisleStripe: new T.MeshStandardMaterial({ color: 0x9c8845, roughness: 0.65 }), // Restrained industrial yellow
     lampGlow: new T.MeshBasicMaterial({ color: 0xf5eedc, toneMapped: false })
   };
+  const drainMat = new T.MeshStandardMaterial({ color: 0x282e31, metalness: 0.65, roughness: 0.62 });
 
   const group = new T.Group();
   group.name = 'BASEMENT_SHELL';
@@ -93,6 +117,14 @@ export function buildBasementEnvironment(T, scene) {
   box(-1.7, 0.005, 5.6, 0.1, 0.01, 7.8, materials.aisleStripe);
   box(1.7, 0.005, 5.6, 0.1, 0.01, 7.8, materials.aisleStripe);
 
+  // Grated contained drains beside the equipment plinth; the walking aisle stays clear.
+  for (const z of [-2.55, 3.05]) {
+    box(0, 0.008, z, 27.8, 0.012, 0.32, drainMat);
+    for (let x = -13.7; x < 13.8; x += 0.34) {
+      box(x, 0.018, z, 0.045, 0.01, 0.30, materials.galvanized);
+    }
+  }
+
   // Robot Dock markings at X = 0, Z = 8.0 (yellow border box)
   box(0, 0.006, 8.0, 1.6, 0.005, 1.6, materials.aisleStripe);
 
@@ -126,7 +158,7 @@ export function buildBasementEnvironment(T, scene) {
       box(x, 6.7, z, 2.2, 0.05, 0.25, materials.lampGlow);
 
       // Light source
-      const light = new T.PointLight(0xf4f0e6, 12, 12, 2);
+      const light = new T.PointLight(0xf4f0e6, 7.5, 12, 2);
       light.position.set(x, 6.5, z);
       light.castShadow = (Math.abs(x) <= 6 && z === 0); // Shadow on central aisle lights only to preserve performance
       group.add(light);
