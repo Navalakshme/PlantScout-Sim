@@ -25,10 +25,14 @@ export function buildBasementEnvironment(T, scene) {
     texture.anisotropy = 4;
     return texture;
   }
-  const floorTexture = concreteTexture('#747a7c', 1729);
+  const floorTexture = new T.TextureLoader().load('./floor-concrete.png');
+  floorTexture.wrapS = floorTexture.wrapT = T.RepeatWrapping;
+  floorTexture.repeat.set(14, 9);
+  floorTexture.colorSpace = T.SRGBColorSpace;
+  floorTexture.anisotropy = 8;
   const wallTexture = concreteTexture('#666b6c', 3811);
   const materials = {
-    floor: new T.MeshStandardMaterial({ map: floorTexture, color: 0xb8babb, roughness: 0.70, metalness: 0.02 }),
+    floor: new T.MeshStandardMaterial({ map: floorTexture, color: 0x9ba5aa, roughness: 0.56, metalness: 0.04 }),
     curb: new T.MeshStandardMaterial({ color: 0x5a5e61, roughness: 0.72, metalness: 0.08 }),
     wall: new T.MeshStandardMaterial({ map: wallTexture, color: 0x9b9d9e, roughness: 0.88, metalness: 0.02 }),
     ceiling: new T.MeshStandardMaterial({ color: 0x3d4042, roughness: 0.90, metalness: 0.05 }),
@@ -140,14 +144,14 @@ export function buildBasementEnvironment(T, scene) {
 
   // --- 5. Overhead Cable Trays & Ventilation Ducts ---
   // Main ventilation duct running East-West at Y = 6.4m, Z = -3.0
-  box(0, 6.4, -3.0, 30.0, 0.55, 0.75, materials.galvanized);
+  box(0, 6.4, -3.0, 30.0, 0.55, 0.75, materials.galvanized).name = 'TOP_VIEW_MAIN_DUCT';
   for (let x = -12; x <= 12; x += 4) {
     // Extract grilles along main duct
     box(x, 6.1, -3.0, 0.6, 0.05, 0.6, materials.steelDark);
   }
 
   // Main electrical cable tray running East-West at Y = 5.8m, Z = 3.0
-  box(0, 5.8, 3.0, 28.0, 0.12, 0.65, materials.galvanized);
+  box(0, 5.8, 3.0, 28.0, 0.12, 0.65, materials.galvanized).name = 'TOP_VIEW_CABLE_TRAY';
 
   // --- 6. Neutral Industrial Lighting & Fixtures ---
   // 3 rows of suspended fluorescent/LED industrial luminaires
@@ -158,9 +162,9 @@ export function buildBasementEnvironment(T, scene) {
       box(x, 6.7, z, 2.2, 0.05, 0.25, materials.lampGlow);
 
       // Light source
-      const light = new T.PointLight(0xf4f0e6, 7.5, 12, 2);
+      const light = new T.PointLight(0xf4f0e6, 3.2, 11, 2);
       light.position.set(x, 6.5, z);
-      light.castShadow = (Math.abs(x) <= 6 && z === 0); // Shadow on central aisle lights only to preserve performance
+      light.castShadow = (x === 0 && z === 0); // One practical central shadow pool keeps navigation smooth.
       group.add(light);
     }
   }
