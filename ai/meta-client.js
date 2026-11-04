@@ -10,7 +10,7 @@ export class MetaInspectionClient {
 
   async checkServerStatus() {
     try {
-      const response = await fetch('/api/status');
+      const response = await fetch('/api/status?verify=1');
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       this.status = await response.json();
     } catch {
@@ -42,12 +42,12 @@ export class MetaInspectionClient {
       inspectionId: payload.inspectionId,
       equipmentOrLocation: payload.equipmentIds?.[0] || payload.stationName,
       evidenceIds: [payload.evidenceId],
-      observation: alarms.length ? alarms.join('; ') : 'Recorded simulated instrument readings; camera frame has not been interpreted by AI.',
+      observation: alarms.length ? alarms.join('; ') : 'No simulated sensor alarm at this station.',
       measurementComparison: comparisons.join('; ') || 'No instrument measurement at this assembly.',
       severity,
       confidence: 0,
-      uncertainty: 'Visual condition unknown unless a separate Meta image finding is available. Sensor values are simulated.',
-      suggestedFollowUp: alarms.length ? 'Review the indicated equipment and camera image.' : 'Continue route; review photo manually if needed.',
+      uncertainty: 'Camera image not assessed at this stop; sensor values are simulated.',
+      suggestedFollowUp: alarms.length ? 'Review the sensor alarm and captured photo.' : 'Continue route.',
       source: 'Simulation telemetry only'
     };
   }
@@ -57,7 +57,7 @@ export class MetaInspectionClient {
     const stationNumber = this.stationCounter++;
     const hasAlarm = telemetryFinding.severity !== 'NORMAL';
     const sampleStation = stationNumber > 0 && stationNumber % 6 === 0;
-    const mustInspectImage = payload.stationId === 'STATION-17';
+    const mustInspectImage = ['P-301', 'F-301', 'P-103', 'GD-901'].includes(payload.equipmentIds?.[0]);
     if (!this.status.configured || this.consecutiveFailures >= 2 || this.requestCounter >= this.maxRequestsPerInspection || !(hasAlarm || sampleStation || mustInspectImage)) {
       if (this.consecutiveFailures >= 2) telemetryFinding.uncertainty += ' Meta image checks paused after repeated errors to protect credits.';
       return { success: true, aiConfigured: false, finding: telemetryFinding };
