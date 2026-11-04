@@ -105,7 +105,9 @@ export function buildEquipmentModels(T, scene) {
     if (spec.id === 'R-101') value = snap.temperatures['R-101_proc'];
     if (spec.id === 'BL-301') value = snap.temperatures['BL-301_proc'];
     if (spec.id === 'P-301') value = snap.temperatures['P-301_brg'];
-    const alarm = sensor && Number.isFinite(sensor.alarmMax) && value >= sensor.alarmMax;
+    const gasDisplay = spec.id === 'GD-901';
+    if (gasDisplay) value = snap.gasDetectorLel;
+    const alarm = gasDisplay ? value >= 20 : sensor && Number.isFinite(sensor.alarmMax) && value >= sensor.alarmMax;
     context.fillStyle = '#111a20';
     context.fillRect(0, 0, 512, 224);
     context.strokeStyle = alarm ? '#e35f55' : '#718c99';
@@ -119,10 +121,10 @@ export function buildEquipmentModels(T, scene) {
     context.fillText(spec.name.slice(0, 29), 25, 91);
     context.fillStyle = alarm ? '#ff7167' : '#77dbc4';
     context.font = 'bold 60px monospace';
-    context.fillText(`${Number(value).toFixed(1)}°C`, 25, 166);
+    context.fillText(gasDisplay ? `${Number(value).toFixed(1)}% LEL` : `${Number(value).toFixed(1)}°C`, 25, 166);
     context.fillStyle = '#8fa5b1';
     context.font = '18px sans-serif';
-    context.fillText(sensor ? sensor.name.toUpperCase() : 'SIMULATED SURFACE TEMP', 25, 197);
+    context.fillText(gasDisplay ? 'SIMULATED VAPOUR DETECTOR' : sensor ? sensor.name.toUpperCase() : 'SIMULATED SURFACE TEMP', 25, 197);
     texture.needsUpdate = true;
   }
 
