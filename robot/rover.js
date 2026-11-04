@@ -17,7 +17,7 @@ export const ROBOT_COMPONENTS = [
   { name: 'Battery Enclosure', desc: '24V 40Ah Lithium Iron Phosphate battery pack with battery management system.' }
 ];
 
-export function createRover(T, scene, onStationStop) {
+export function createRover(T, scene, onStationStop, onTravelScan) {
   const root = new T.Group();
   root.name = 'ROBOT-001_SCOUT';
   root.position.set(0.0, 0, 7.8); // Dock position
@@ -116,6 +116,7 @@ export function createRover(T, scene, onStationStop) {
 
   // State
   let state = 'Docked'; // 'Docked' | 'En Route' | 'Inspecting' | 'Paused' | 'Emergency Stop' | 'Complete'
+  let stateBeforePause = 'Docked';
   let stationIndex = 0;
   let activePath = [];
   let isMoving = false;
@@ -129,6 +130,11 @@ export function createRover(T, scene, onStationStop) {
   let tiltAngle = 0;
   let driveSpeed = 0;
   let speedMultiplier = 1.0;
+  let missionId = 0;
+  let missionInterrupted = false;
+  let travelScanClock = 0;
+  let travelScanPhase = 0;
+  const scanPhases = ['upper', 'lower', 'opposite', 'floor'];
 
   const lidarRays = new Float32Array(24);
   const routeLog = [];
@@ -167,11 +173,13 @@ export function createRover(T, scene, onStationStop) {
     get state() { return state; },
     get stationIndex() { return stationIndex; },
     get isPaused() { return isPaused; },
+    get isMoving() { return isMoving; },
     get isEstop() { return isEstop; },
     get speedMultiplier() { return speedMultiplier; },
     set speedMultiplier(val) { speedMultiplier = val; },
     get lidarRays() { return lidarRays; },
     get routeLog() { return routeLog; },
+    get missionId() { return missionId; },
     setAlert(active) {
       alertActive = active;
       warningBeacon.material = active ? materials.red : materials.yellow;
@@ -180,13 +188,18 @@ export function createRover(T, scene, onStationStop) {
 
     startAutomaticInspection() {
       if (isEstop) return false;
+      missionId++;
       stationIndex = 0;
       this.setAlert(false);
       routeLog.length = 0;
       isPaused = false;
       dwellTimer = 0;
+      inspectionPending = false;
       panAngle = 0;
       tiltAngle = 0;
+      missionInterrupted = false;
+      travelScanClock = 0;
+      travelScanPhase = 0;
 
       const firstStation = INSPECTION_STATIONS[0];
       const ok = setGoal(firstStation.position);
@@ -201,12 +214,27 @@ export function createRover(T, scene, onStationStop) {
     },
 
     pause() {
-      isPaused = !isPaused;
-      if (isPaused) {
-        state = 'Paused';
-      } else {
-        state = activePath.length ? 'En Route' : 'Inspecting';
+      if (missionInterrupted) return;
+      if (!isPaused) { stateBeforePause = state; isPaused = true; state = 'Paused'; }
+      else { isPaused = false; state = stateBeforePause; }
+    },
+
+    resumeAutomaticInspection() {
+      if (isEstop || state === 'Inspection Complete') return false;
+      if (isPaused && !missionInterrupted) {
+        isPaused = false;
+        state = stateBeforePause;
+        return true;
       }
+      isPaused = false;
+      missionInterrupted = false;
+      const current = INSPECTION_STATIONS[Math.min(stationIndex, INSPECTION_STATIONS.length - 1)];
+      if (!current || !setGoal(current.position)) { state = 'Route Blocked'; return false; }
+      isMoving = true;
+      state = 'En Route';
+      travelScanClock = 0;
+      travelScanPhase = 0;
+      return true;
     },
 
     emergencyStop() {
@@ -216,6 +244,19 @@ export function createRover(T, scene, onStationStop) {
       state = 'Emergency Stop';
     },
 
+    stopAutomaticInspection() {
+      missionId++;
+      isMoving = false;
+      isPaused = false;
+      activePath = [];
+      drawPlannedRoute();
+      dwellTimer = 0;
+      inspectionPending = false;
+      driveSpeed = 0;
+      missionInterrupted = false;
+      state = 'Inspection Stopped';
+    },
+
     resumeControls() {
       isEstop = false;
       isPaused = false;
@@ -223,6 +264,7 @@ export function createRover(T, scene, onStationStop) {
     },
 
     resetToDock() {
+      missionId++;
       isMoving = false;
       isPaused = false;
       isEstop = false;
@@ -234,12 +276,18 @@ export function createRover(T, scene, onStationStop) {
       stationIndex = 0;
       this.setAlert(false);
       dwellTimer = 0;
+      inspectionPending = false;
+      driveSpeed = 0;
       state = 'Docked';
+      missionInterrupted = false;
+      travelScanClock = 0;
     },
 
     manualDrive(throttle, turn, dt) {
       if (isEstop || isPaused) return;
-      state = 'Manual Driving';
+      if (isMoving || state === 'Station Dwell / Observing') missionInterrupted = true;
+      isMoving = false;
+      state = missionInterrupted ? 'Manual Control · Route Paused' : 'Manual Driving';
       activePath = [];
       drawPlannedRoute();
 
@@ -286,6 +334,20 @@ export function createRover(T, scene, onStationStop) {
 
       if (isPaused || isEstop) return;
 
+      if (isMoving && onTravelScan) {
+        travelScanClock += dt * Math.min(speedMultiplier, 2.5);
+        if (travelScanClock >= 0.9) {
+          travelScanClock = 0;
+          const phase = scanPhases[travelScanPhase++ % scanPhases.length];
+          const station = INSPECTION_STATIONS[Math.min(stationIndex, INSPECTION_STATIONS.length - 1)];
+          if (phase === 'upper') this.aimCamera(0, 0.26);
+          if (phase === 'lower') this.aimCamera(0, -0.22);
+          if (phase === 'opposite') this.aimCamera(Math.PI * 0.65, 0.02);
+          if (phase === 'floor') this.aimCamera(0, -0.57);
+          onTravelScan(phase, station);
+        }
+      }
+
       if (isMoving && activePath.length > 0) {
         const step = dt * speedMultiplier * 1.6;
         const target = activePath[0];
@@ -331,6 +393,8 @@ export function createRover(T, scene, onStationStop) {
         dwellTimer = 4.0 / speedMultiplier; // 4 seconds at the normal inspection speed
 
         const currentStation = INSPECTION_STATIONS[stationIndex];
+        // Complete the four-direction sweep even when a route leg is short.
+        if (onTravelScan) for (const phase of scanPhases) onTravelScan(phase, currentStation);
 
         // Aim camera toward target equipment
         if (currentStation.lookAt) {
@@ -346,9 +410,10 @@ export function createRover(T, scene, onStationStop) {
         // Trigger station inspection callback (captures frame, checks telemetry, triggers Meta analysis)
         if (onStationStop) {
           inspectionPending = true;
-          Promise.resolve(onStationStop(currentStation, stationIndex))
+          const pendingMission = missionId;
+          Promise.resolve(onStationStop(currentStation, stationIndex, pendingMission))
             .catch(error => console.warn('Station inspection failed', error))
-            .finally(() => { inspectionPending = false; });
+            .finally(() => { if (pendingMission === missionId) inspectionPending = false; });
         }
       } else if (!isMoving && state === 'Station Dwell / Observing') {
         dwellTimer = Math.max(0, dwellTimer - dt);
