@@ -22,6 +22,7 @@ export function buildPipeNetwork(T, scene) {
   });
 
   const lineMeshes = new Map();
+  const leakParts = { intact: null, cut: [] };
 
   function pipeSegment(a, b, radius, mat = defaultPipeMat) {
     const av = new T.Vector3(...a), bv = new T.Vector3(...b);
@@ -90,6 +91,23 @@ export function buildPipeNetwork(T, scene) {
       // Main pipe segment
       const seg = pipeSegment(p1, p2, radius, defaultPipeMat);
       if (seg) segments.push(seg);
+      if (line.id === 'L-SOLV-02' && i === 0 && seg) {
+        leakParts.intact = seg;
+        const midpoint = v1.clone().lerp(v2, 0.62);
+        const cutLength = 0.58;
+        const leftEnd = midpoint.clone().addScaledVector(dir, -cutLength / 2);
+        const rightStart = midpoint.clone().addScaledVector(dir, cutLength / 2);
+        leakParts.cut.push(pipeSegment(p1, leftEnd.toArray(), radius, defaultPipeMat));
+        leakParts.cut.push(pipeSegment(rightStart.toArray(), p2, radius, defaultPipeMat));
+        for (const end of [leftEnd, rightStart]) {
+          const collar = new T.Mesh(new T.CylinderGeometry(radius * 2.1, radius * 2.1, 0.08, 16), flangeMat);
+          collar.position.copy(end);
+          collar.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), dir);
+          root.add(collar);
+          leakParts.cut.push(collar);
+        }
+        leakParts.cut.forEach(part => { part.visible = false; });
+      }
 
       // Flanges at endpoints
       if (i === 0) {
@@ -106,7 +124,7 @@ export function buildPipeNetwork(T, scene) {
 
       // Subtle service identification band at midpoint of long segments
       const len = v1.distanceTo(v2);
-      if (len > 1.2) {
+      if (len > 1.2 && !(line.id === 'L-SOLV-02' && i === 0)) {
         const mid = v1.clone().add(v2).multiplyScalar(0.5);
         serviceBand([mid.x, mid.y, mid.z], radius, line.service, dir);
 
@@ -129,6 +147,11 @@ export function buildPipeNetwork(T, scene) {
   return {
     root,
     lineMeshes,
+    setScenario(scenario) {
+      const broken = scenario === 'defective';
+      if (leakParts.intact) leakParts.intact.visible = !broken;
+      leakParts.cut.forEach(part => { part.visible = broken; });
+    },
     highlightLine(lineId, active = true) {
       const entry = lineMeshes.get(lineId);
       if (!entry) return;
