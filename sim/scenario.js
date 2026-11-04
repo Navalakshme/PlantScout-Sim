@@ -17,7 +17,7 @@ export const SCENARIOS = {
     id: 'defective',
     name: 'Defective Basement',
     seed: 1337,
-    description: 'Contains an uncontained solvent/oil spill near pump P-301, elevated motor bearing temperature, and restricted filter DP.',
+    description: 'Seeded spill, hot bearing, restricted filter, cut solvent pipe with detector alarm, and visible sample particles.',
     injectedDefects: [
       {
         id: 'DEF-01-SPILL',
@@ -25,9 +25,9 @@ export const SCENARIOS = {
         targetEq: 'P-301',
         location: [4.8, 0.005, -0.7],
         footprint: [1.8, 1.2],
-        description: 'Uncontained dark amber solvent/oil pooling spreading across concrete floor near P-301 pump base.',
-        severity: 'CRITICAL',
-        suspectedSubstance: 'Aliphatic solvent / resin mixture'
+        description: 'Seeded dark amber liquid pooling across the floor near P-301; its chemical identity has not been measured.',
+        severity: 'WARNING',
+        suspectedSubstance: 'Unknown'
       },
       {
         id: 'DEF-02-TEMP',
@@ -50,12 +50,28 @@ export const SCENARIOS = {
         unit: 'bar',
         warnLimit: 1.50,
         alarmLimit: 2.20,
-        severity: 'WARNING',
+        severity: 'CRITICAL',
         description: 'Differential pressure across polishing filter F-301 elevated due to particulate accumulation.'
+      },
+      {
+        id: 'DEF-04-PIPE', type: 'Broken Solvent Transfer Pipe', targetEq: 'P-103',
+        location: [-8.4, 2.6, -3.65], severity: 'CRITICAL',
+        description: 'Visible discontinuity in simulated L-SOLV-02 transfer pipe with a vapor effect. The graphic alone cannot identify gas or concentration.'
+      },
+      {
+        id: 'DEF-05-GAS', type: 'Gas Detector Alarm', targetEq: 'GD-901',
+        tag: 'GD-901.AT-01', value: 23.4, unit: '% LEL', warnLimit: 10, alarmLimit: 20,
+        severity: 'CRITICAL', description: 'Simulated vapour detector reads 23.4% LEL, above its 20% LEL demonstration alarm.'
+      },
+      {
+        id: 'DEF-06-PARTICLES', type: 'Visible Sample Particles', targetEq: 'F-301',
+        location: [5.5, 1.35, -4.15], severity: 'WARNING',
+        description: 'Dark particles are visible in the simulated F-301 sample sight glass; composition is unknown.'
       }
     ],
     p301BearingTemp: 108.4,
     f301FilterDp: 2.85,
+    gasDetectorLel: 23.4,
     spill: {
       position: [4.8, 0.005, -0.7],
       size: [1.8, 1.2],
@@ -74,6 +90,7 @@ export class ScenarioManager {
     this.engine = engine;
     this.currentScenario = 'normal';
     this.spillMesh = null;
+    this.defectGroup = null;
     this.listeners = new Set();
   }
 
@@ -91,6 +108,7 @@ export class ScenarioManager {
     // Update 3D scene spill visualization
     if (scene && ThreeInstance) {
       this.updateSpillVisualization(scene, ThreeInstance);
+      this.updateDefectVisualization(scene, ThreeInstance);
     }
 
     this.notify();
@@ -165,6 +183,53 @@ export class ScenarioManager {
       this.spillMesh.name = 'OIL_SPILL_MESH';
       scene.add(this.spillMesh);
     }
+  }
+
+  updateDefectVisualization(scene, T) {
+    if (this.defectGroup) {
+      scene.remove(this.defectGroup);
+      this.defectGroup.traverse(object => {
+        object.geometry?.dispose();
+        if (object.material) {
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach(material => material.dispose());
+        }
+      });
+    }
+    const group = new T.Group();
+    group.name = 'SCENARIO_DEFECT_FIXTURES';
+    const defective = this.currentScenario === 'defective';
+
+    // An aisle-facing sample sight glass at F-301 makes contamination visible to the mast camera.
+    const sample = new T.Group();
+    sample.position.set(5.5, 1.35, galleryZ(-5.0) + 0.76);
+    const bezel = new T.Mesh(new T.BoxGeometry(0.67, 0.72, 0.09), new T.MeshStandardMaterial({ color: 0x566570, metalness: 0.8, roughness: 0.25 }));
+    sample.add(bezel);
+    const glass = new T.Mesh(new T.BoxGeometry(0.53, 0.54, 0.11), new T.MeshPhysicalMaterial({ color: defective ? 0x9c7b42 : 0xaccdd1, transparent: true, opacity: 0.88, roughness: 0.08, metalness: 0.05 }));
+    glass.position.z = 0.055;
+    sample.add(glass);
+    if (defective) {
+      for (let i = 0; i < 23; i++) {
+        const particle = new T.Mesh(new T.SphereGeometry(0.009 + (i % 4) * 0.003, 8, 6), new T.MeshBasicMaterial({ color: i % 3 ? 0x231e17 : 0x574025 }));
+        particle.position.set(((i * 17) % 47) / 100 - 0.23, ((i * 29) % 43) / 100 - 0.21, 0.123);
+        sample.add(particle);
+      }
+    }
+    group.add(sample);
+
+    if (defective) {
+      const leak = new T.Group();
+      leak.name = 'CUT_PIPE_VAPOR_EFFECT';
+      leak.position.set(-8.4, 2.6, galleryZ(-3.65));
+      for (let i = 0; i < 14; i++) {
+        const puff = new T.Mesh(new T.SphereGeometry(0.09 + (i % 4) * 0.045, 9, 7), new T.MeshBasicMaterial({ color: 0xa2b9c3, transparent: true, opacity: 0.18 + (i % 3) * 0.04, depthWrite: false }));
+        puff.position.set(0.22 + (i % 5) * 0.07, Math.floor(i / 5) * 0.18 + 0.04, 0.12 + (i % 4) * 0.06);
+        leak.add(puff);
+      }
+      group.add(leak);
+    }
+    scene.add(group);
+    this.defectGroup = group;
   }
 
   subscribe(callback) {
