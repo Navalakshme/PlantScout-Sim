@@ -86,6 +86,7 @@ export class ProcessSimulationEngine {
     };
 
     this.qualityReleaseApproved = false;
+    this.gasDetectorLel = initialScenario === 'defective' ? 23.4 : 0.8;
     this.activeAlarms = [];
   }
 
@@ -116,6 +117,7 @@ export class ProcessSimulationEngine {
     this.temperatures['E-201_cond'] = 22.0;
     this.temperatures['E-201_cw'] = 20.0;
     this.temperatures['P-301_brg'] = scenario === 'defective' ? 108.4 : 52.3;
+    this.gasDetectorLel = scenario === 'defective' ? 23.4 : 0.8;
 
     this.pressures['V-701'] = 6.8;
     this.pressures['P-103'] = 0.0;
@@ -363,11 +365,20 @@ export class ProcessSimulationEngine {
         id: 'ALM-F301-DPT',
         tag: 'F-301.DPT',
         equipment: 'F-301',
-        severity: 'WARNING',
+        severity: 'CRITICAL',
         type: 'Restricted Filter DP',
         value: this.pressures['F-301_dp'].toFixed(2) + ' bar',
         threshold: '2.20 bar',
         message: 'Polishing filter differential pressure restricted (2.85 bar vs alarm 2.20 bar).'
+      });
+    }
+
+    if (this.gasDetectorLel >= 20) {
+      alarms.push({
+        id: 'ALM-GD901-LEL', tag: 'GD-901.AT-01', equipment: 'GD-901',
+        severity: 'CRITICAL', type: 'Simulated Vapour Detector Alarm',
+        value: this.gasDetectorLel.toFixed(1) + ' % LEL', threshold: '20 % LEL',
+        message: 'Detector reading exceeds the demonstration alarm; the camera cannot identify gas concentration.'
       });
     }
 
@@ -394,6 +405,7 @@ export class ProcessSimulationEngine {
       flows: { ...this.flows },
       speeds: { ...this.speeds },
       analyticals: { ...this.analyticals },
+      gasDetectorLel: this.gasDetectorLel,
       activeAlarms: [...this.activeAlarms]
     };
   }
