@@ -38,7 +38,7 @@ The application simulates **solvent-assisted batch alkyd-resin manufacture via t
   - *Electrical & Control Suite*: South (`X: 3.5 to 8.5, Z: 6.5`)
   - *Ventilation & Sump*: Southeast (`X: 10.0 to 14.0, Z: 3.0 to 6.5`)
   - *Robot Dock*: South entrance (`X: 0.0, Z: 7.8`)
-- **Entrance**: The south vestibule opens through a PIN-controlled demonstration door. Enter `2048`; movement pauses inside until the controls guide is dismissed. The left sidebar can reopen that guide.
+- **Entrance**: Each basement opens at a closed south vestibule door. Choose **Approach door**, then enter the demonstration PIN `2048`. Movement pauses inside until the controls guide is dismissed. Switching basements returns to the closed door and asks for the PIN again.
 - **On-equipment displays**: Equipment signs show the assembly tag, name and temperature in both scenarios. A red display indicates a configured temperature alarm. Where no temperature sensor exists, the value is explicitly labelled simulated surface temperature.
 - **External Boundaries**:
   - Bulk solvent storage, thermal fluid combustion heater, cooling tower, and waste/vapour treatment reside outside the basement shell, connected via labelled wall terminals: `EXT-SOLVENT`, `EXT-THERMAL`, `EXT-COOLING`, `EXT-VAPOUR`, `EXT-WASTE`.
@@ -107,14 +107,17 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
 - Clean concrete floor with zero spills.
 - Pump `P-301` bearing temperature: **52.3 °C** (Normal < 65 °C).
 - Filter `F-301` differential pressure: **0.42 bar** (Normal 0.1 – 0.8 bar).
-- No active alarms; overall audit conclusion: **"No configured anomalies observed in inspected areas."**
+- No configured threshold alarms in the normal scenario; the report distinguishes sampled telemetry from unreviewed camera frames.
 
 ### Defective Basement (Seed 1337)
 - **Visible Liquid Floor Spill**: Physical dark amber glossy puddle mesh (~1.8m &times; 1.2m footprint) rendered directly on the concrete floor adjacent to pump `P-301`.
 - **Motor Bearing Overtemperature**: Pump `P-301` drive-end bearing sensor `P-301.TT-BRG` reads **108.4 °C**, exceeding both the warning threshold (75.0 °C) and the alarm threshold (90.0 °C).
 - **Restricted Filter Differential Pressure**: Polishing filter `F-301.DPT` reads **2.85 bar** (Inlet 3.85 bar, Outlet 1.00 bar), exceeding the alarm limit of 2.20 bar.
-- Overall audit conclusion: **"Anomalies detected: 2 critical condition(s) and 0 warning(s) observed."**
-- Switching scenarios immediately clears all temporary state, resets the robot to the dock, removes/adds the physical spill, and resets telemetry. Evidence is never mixed between scenarios.
+- **Cut Solvent Line**: `L-SOLV-02` has a visible physical gap near `P-103` with a simulated vapor plume.
+- **Gas Detector Alarm**: `GD-901.AT-01` reads **23.4% LEL**, above its 20% LEL demonstration alarm. The image alone cannot measure gas concentration or identify it.
+- **Sample Particles**: The aisle-facing `F-301` sight glass contains visible dark particles; their composition is unknown.
+- The robot reports threshold alarms from simulated instruments. A seeded visual fault that Meta does not confirm is marked **simulation ground truth**, with its frame retained for review.
+- Switching basements resets the active process, door, robot, and telemetry. Each basement keeps its own report during the current browser session; evidence is never mixed between reports.
 
 ---
 
@@ -127,9 +130,11 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
   - `Follow Robot`: Third-person chase camera trailing smoothly behind the rover.
   - `Masthead Camera`: Direct first-person RGB camera feed from the robot's masthead lens with HUD crosshairs and telemetry.
   - Manual driving via keyboard (`W A S D`, Arrow keys, Space for E-Stop) or interactive on-screen touch buttons.
-- **Autonomous Coverage Route (38 Stops, 37 Assemblies)**:
-  - Starts at Dock, visits every registered assembly through collision-checked approaches including the floor spill zone at Station 17, then returns to Dock.
-  - At each stop, the robot aligns toward the target equipment or floor zone, captures a high-resolution canvas screenshot from the masthead camera, checks telemetry against stage thresholds, checks line-of-sight visibility, and submits structured evidence to the inspection session.
+- **Autonomous Coverage Route (37 Stops, 37 Assemblies)**:
+  - Starts at Dock and visits every registered assembly through collision-checked approaches, including the floor spill zone at Station 17. It finishes at the final inspected assembly without an automatic return to Dock.
+  - During travel and at each stop, the robot records upper, lower, opposite-side, and floor checks. Installed instruments provide simulated measurements; the report says when no such instrument is installed. At each stop, the robot aims at the target, captures a masthead frame, checks telemetry thresholds, and adds evidence to the basement's report. The full-screen view supports Follow, Masthead, and Top camera modes without resetting the route, plus speed, pause, stop, and report controls.
+  - Speech is tied to each station dwell. Route speeds 1×, 2.5×, and 5× use browser-safe voice rates of 0.95×, 1.4×, and 1.8×; the rover waits for each sentence before advancing. A speed change applies to the next sentence without cutting off the current one. Pausing or stopping cancels speech. Meta writes a concise spoken summary when it analyzes a frame; the browser speech engine renders that text.
+  - Manual driving pauses the automatic route. **Resume from here** replans toward the current station.
 
 ---
 
@@ -140,26 +145,23 @@ All 3D pipework, process state transitions, telemetry, and UI schematics are gen
   - `GET /api/status`: Reports whether `META_API_KEY` is configured; `?verify=1` authenticates with Meta's `/models` endpoint.
   - `POST /api/analyze-station`: Accepts evidence payloads (`{ inspectionId, stationId, equipmentIds, cameraImageBase64, telemetry, thresholds, evidenceId }`).
   - `POST /api/synthesize-report`: Returns a deterministic summary of submitted findings.
-- **Model**: `muse-spark-1.3` through `https://api.meta.ai/v1/chat/completions`. The server holds the key. Up to 10 selected masthead images per run are analyzed; all 38 stops still save a photo and simulated instrument readings.
-- **Evidence limits**: The report labels Meta camera findings, simulated telemetry checks, and scenario ground truth separately. A telemetry-only result does not claim that the photo was analyzed. A simulation spill flag is reported as ground truth if the image model does not confirm it.
+- **Model**: `muse-spark-1.3` through `https://api.meta.ai/v1/chat/completions`. The server holds the key. Up to 10 selected masthead images per run are analyzed, prioritizing the spill, filter, cut pipe, and gas detector; all 37 stops still save a photo and simulated instrument readings. The same model response supplies a short spoken summary and an optional normalized visual highlight box.
+- **Evidence limits**: The report labels Meta camera findings, simulated telemetry checks, and scenario ground truth separately. A telemetry-only result does not claim that the photo was analyzed. Seeded visual faults are reported as ground truth if the image model does not confirm them. Meta Muse Voice Transcribe is speech-to-text, so spoken output uses browser speech synthesis rather than claiming Meta-generated audio.
 
 ---
 
 ## 8. Dashboard & Interactive Reporting
 
-- **Fixed Dark Sidebar**:
-  1. *Overview*: Conceptual batch process summary, stage descriptions, and batch ID pills.
-  2. *Explore complete basement*: Hides the robot, enables free exploration, and opens the searchable 37-assembly equipment directory.
-  3. *Start inspection*: Resets robot to dock, creates a fresh inspection ID, and executes the autonomous route.
-  4. *Inspection report*: Displays the full audit report below the viewport.
-  5. *Equipment and process flow*: Interactive Process Flow Diagram (PFD) showing all equipment and upstream/downstream connections.
-- **Controls & movement**: Opens the movement guide after entry.
+- **Task screens**: Overview; Basement 1 Access, Explore, and Robot inspection; Basement 2 Access, Explore, and Robot inspection; Reports; Equipment & process; Controls & help. The sidebar moves between these views without stacking every task on one dashboard. Robot inspection starts the demonstration process and route with one action, and enters a full-viewport scan view. The Equipment & process screen keeps its directory and diagram visible while an assembly opens in a distant 3D preview.
+- **Controls & movement**: A guide appears after entry and is available from the sidebar or Controls & help. Mouse wheel zoom, camera reset, manual robot driving, route pause, and resume are supported.
 - **Compact Telemetry Bar**: Live stage progress %, R-101 temp & level, BL-301 temp, P-301 bearing temp, F-301 filter DP, container mass, and simulated acid value.
 - **Inspection Audit Report**:
-  - Metadata cards: Inspection ID, Scenario, Timings, Route Coverage (38/38 Stops), and visited equipment (37/37 on a complete route).
+  - Basement 1 and Basement 2 report tabs keep separate findings during the current browser session.
+  - Metadata cards: Inspection ID, Scenario, Timings, Route Coverage (37/37 Stops), and visited equipment (37/37 on a complete route).
+  - Travel scan log shows recent checks by default and offers the full log; JSON export includes all checks.
   - Grounded conclusion banner with color coding.
   - Visual findings cards with camera frame thumbnails, measurement comparisons, confidence/uncertainty, and recommended follow-up.
-  - **"Locate & Highlight in 3D"**: Clicking any finding smoothly flies the camera to the equipment or floor spill and draws a glowing bounding highlight box in the 3D scene!
+  - **Evidence viewer**: Clicking a report finding opens its full captured frame on the Reports screen. A Meta-returned visual box is shown only when the model provides a valid location; simulated sensor and seeded-fault entries remain clearly labelled.
   - Export buttons: Download machine-readable JSON report or trigger formatted Print / PDF Export.
 
 ---
@@ -172,13 +174,15 @@ node verify-system.mjs
 node scripts/run-inspection-test.mjs
 ```
 
+The inspection fixture test runs offline and makes no Meta API requests.
+
 Verification covers:
 - Exact 37 unique equipment IDs and required assemblies.
 - All 35 connection lines resolve to valid endpoints with continuous 3D coordinate waypoints.
 - Separation of cooling water, thermal fluid, process streams, and containment drains.
 - Gravity elevation of condenser E-201 above separator V-201 above receiver TK-201.
 - Central inspection aisle (Z = -1.7 to +1.7m) completely unobstructed by obstacles.
-- A* collision-checked navigation routes across all 38 stops.
+- A* collision-checked navigation routes across all 37 stops.
 - Deterministic process permissives, mass conservation, and emergency shutdown isolation.
 - Normal vs Defective scenario seeding, spill mesh rendering, and alarm clearing.
 
@@ -199,7 +203,7 @@ Verification covers:
    - `?stage=9`: Jumps simulation to Stage 09 (Filtration).
    - `?highlight=R-101`: Focuses and highlights reactor R-101.
    - `?highlight_spill=1`: Focuses and highlights the floor spill.
-   - `?auto_report=1`: Fast-forwards the inspection route to immediately display completed audit findings.
+   - `?auto_report=1`: Runs a fast local inspection for verification; open Reports after the route finishes.
 
 ---
 

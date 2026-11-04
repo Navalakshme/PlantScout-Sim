@@ -30,7 +30,7 @@ camera.position.set(0.0, 1.75, 11.7); // Stop at the sealed vestibule door first
 
 const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
 renderer.domElement.tabIndex = 0;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.35));
 renderer.setSize(viewportElem.clientWidth, viewportElem.clientHeight);
 renderer.outputColorSpace = T.SRGBColorSpace;
 renderer.toneMapping = T.ACESFilmicToneMapping;
@@ -65,19 +65,27 @@ scene.add(mainSun, mainSun.target);
 const basement = buildBasementEnvironment(T, scene);
 const equipment = buildEquipmentModels(T, scene);
 const pipes = buildPipeNetwork(T, scene);
+const topViewOccluders = ['TOP_VIEW_MAIN_DUCT', 'TOP_VIEW_CABLE_TRAY'].map(name => scene.getObjectByName(name)).filter(Boolean);
+let entryOpen = false;
+const entryOverlay = document.getElementById('entry-overlay');
+const controlsOverlay = document.getElementById('controls-overlay');
+const entryPin = document.getElementById('entry-pin');
 
 // --- 3. Process Simulation & Scenario Management ---
 const engine = new ProcessSimulationEngine('normal');
 const scenarioMgr = new ScenarioManager(engine);
 scenarioMgr.updateSpillVisualization(scene, T);
+scenarioMgr.updateDefectVisualization(scene, T);
+scenarioMgr.subscribe(scenario => pipes.setScenario(scenario.id));
 
 // --- 4. Robot & Autonomous Inspection Callback ---
 let dashboard = null;
 
-function captureCameraSnapshot() {
+function captureCameraSnapshot(station) {
   // Render from the mast lens, independently of the operator's selected view.
   const oldPosition = camera.position.clone();
   const oldQuaternion = camera.quaternion.clone();
+  const oldFov = camera.fov;
   const lens = new T.Vector3();
   const direction = new T.Vector3(0, 0, -1);
   rover.cameraHead.getWorldPosition(lens);
@@ -85,63 +93,127 @@ function captureCameraSnapshot() {
   direction.applyQuaternion(oldFrameQuaternion);
   camera.position.copy(lens).addScaledVector(direction, 0.16);
   camera.lookAt(camera.position.clone().add(direction));
+  if (station?.targetEq === 'P-103' || station?.targetEq === 'GD-901') {
+    camera.fov = 45;
+    camera.updateProjectionMatrix();
+  }
   renderer.render(scene, camera);
   const frame = renderer.domElement.toDataURL('image/jpeg', 0.8);
   camera.position.copy(oldPosition);
   camera.quaternion.copy(oldQuaternion);
+  camera.fov = oldFov;
+  camera.updateProjectionMatrix();
   return frame;
 }
 
 const oldFrameQuaternion = new T.Quaternion();
 
-const rover = createRover(T, scene, (station, stationIndex) => {
+const rover = createRover(T, scene, (station, stationIndex, missionAtStop) => {
   return new Promise((resolve, reject) => setTimeout(async () => {
     try {
-    const frame = captureCameraSnapshot();
+    if (missionAtStop !== rover.missionId) { resolve(); return; }
+    const frame = captureCameraSnapshot(station);
     if (dashboard) {
       await dashboard.handleStationObservation(station, stationIndex, frame);
     }
     resolve();
     } catch (error) { reject(error); }
   }, 350));
-});
+}, (phase, station) => dashboard?.handleTravelScan(phase, station));
 
 // --- 5. Meta AI Client & Dashboard Controller ---
 const metaClient = new MetaInspectionClient();
 dashboard = new DashboardController(engine, scenarioMgr, rover, metaClient, camera, scene, T);
 
-// URL Query Parameter Initialisation for testing & direct linking
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('scenario') === 'defective') {
-  dashboard.setScenario('defective');
-  document.getElementById('scenario-select').value = 'defective';
-}
-if (urlParams.has('stage')) {
-  engine.setStage(Number(urlParams.get('stage')) - 1);
-}
-if (urlParams.get('view')) {
-  dashboard.switchView(urlParams.get('view'));
-}
-if (urlParams.get('highlight')) {
-  setTimeout(() => dashboard.selectEquipment(urlParams.get('highlight')), 350);
-}
-if (urlParams.get('highlight_spill')) {
-  setTimeout(() => dashboard.highlightSpillInScene(), 350);
-}
-if (urlParams.get('auto_report') === '1') {
-  rover.speedMultiplier = 25.0; // Rapid fast-forward for verification
-  dashboard.startNewInspection();
-}
-
 // --- 6. Camera Views & User Controls ---
 let activeCamView = 'walk'; // 'walk' | 'follow' | 'camera'
 const keys = new Set();
-let entryOpen = false;
-const entryOverlay = document.getElementById('entry-overlay');
-const controlsOverlay = document.getElementById('controls-overlay');
-const entryPin = document.getElementById('entry-pin');
+let walkPitch = 0;
+let walkYaw = 0;
+dashboard.canEnter = () => entryOpen;
+dashboard.onCameraRestored = () => { walkYaw = camera.rotation.y; walkPitch = camera.rotation.x; };
+function resizeViewport() {
+  requestAnimationFrame(() => {
+    const w = Math.max(1, viewportElem.clientWidth), h = Math.max(1, viewportElem.clientHeight);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+}
+dashboard.onPreviewChanged = () => { activeCamView = 'walk'; resizeViewport(); };
+dashboard.onScreenChanged = view => {
+  if (view !== 'access') entryOverlay.classList.add('hidden');
+  if (view === 'explore') document.querySelector('.view-btn[data-cam="walk"]')?.click();
+  if (view === 'inspection') document.querySelector('.view-btn[data-cam="follow"]')?.click();
+  resizeViewport();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+};
+dashboard.onAccessRequested = scenario => {
+  ++dashboard.flightToken;
+  entryOpen = false;
+  keys.clear();
+  dashboard.interruptInspection();
+  dashboard.onProcessStopped?.();
+  rover.resetToDock();
+  equipment.equipmentMap.get('DOOR-001').rotation.y = 0;
+  camera.position.set(0, 1.75, 11.7);
+  camera.rotation.set(0, 0, 0);
+  camera.fov = 70;
+  camera.updateProjectionMatrix();
+  walkYaw = 0; walkPitch = 0;
+  activeCamView = 'walk';
+  document.querySelector('.view-btn[data-cam="walk"]')?.click();
+  document.getElementById('entry-basement').value = scenario;
+  document.getElementById('entry-kicker').textContent = `PLANTSCOUT • BASEMENT ${scenario === 'normal' ? '1' : '2'}`;
+  document.getElementById('entry-instruction').textContent = 'The door is closed. Approach it before entering the demonstration PIN.';
+  document.getElementById('entry-approach').classList.remove('hidden');
+  document.getElementById('entry-pin-step').classList.add('hidden');
+  document.getElementById('entry-error').textContent = '';
+  entryPin.value = '';
+  entryOverlay.classList.remove('hidden');
+};
+document.getElementById('entry-approach').addEventListener('click', () => {
+  dashboard.flyCameraTo([0, 1.75, 10.9], [0, 1.35, 10.0]);
+  document.getElementById('entry-approach').classList.add('hidden');
+  document.getElementById('entry-pin-step').classList.remove('hidden');
+  document.getElementById('entry-instruction').textContent = 'At the door. Enter the demonstration PIN to unlock the process hall.';
+  entryPin.focus();
+});
+document.getElementById('entry-back').addEventListener('click', () => dashboard.switchView('overview'));
+document.getElementById('btn-reset-view').addEventListener('click', resetCameraView);
+document.getElementById('btn-reset-camera').addEventListener('click', resetCameraView);
+function resetCameraView() {
+  ++dashboard.flightToken;
+  dashboard.closeEquipmentDetails();
+  camera.fov = 70; camera.updateProjectionMatrix();
+  if (dashboard.activeView === 'inspection') {
+    document.querySelector('.view-btn[data-cam="follow"]')?.click();
+  } else {
+    document.querySelector('.view-btn[data-cam="walk"]')?.click();
+    camera.position.set(0, 1.75, entryOpen ? 5.6 : 11.7);
+    camera.rotation.set(0, 0, 0);
+    walkYaw = 0; walkPitch = 0;
+  }
+}
+
+// Preserve direct links while keeping the entrance gate for both basements.
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('scenario') === 'defective') dashboard.setScenario('defective');
+if (urlParams.has('stage')) engine.setStage(Number(urlParams.get('stage')) - 1);
+if (urlParams.get('view')) dashboard.switchView(urlParams.get('view'));
+if (urlParams.get('highlight')) setTimeout(() => dashboard.openEquipmentInScene(urlParams.get('highlight')), 350);
+if (urlParams.get('highlight_spill')) {
+  dashboard.pendingSpill = true;
+  setTimeout(() => dashboard.switchView('access'), 350);
+}
+if (urlParams.get('auto_report') === '1') {
+  entryOpen = true;
+  if (engine.stageIndex === 0) engine.setStage(8);
+  rover.speedMultiplier = 25.0;
+  dashboard.startNewInspection();
+}
 function showControls() {
-  if (!entryOpen) return;
+  if (!entryOpen) { dashboard.switchView('controls'); return; }
   controlsOverlay.classList.remove('hidden');
   document.getElementById('controls-close').focus();
 }
@@ -158,19 +230,31 @@ function enterBasement() {
   }
   entryOpen = true;
   const selectedBasement = document.getElementById('entry-basement').value;
-  dashboard.setScenario(selectedBasement);
-  document.getElementById('scenario-select').value = selectedBasement;
+  if (scenarioMgr.currentScenario !== selectedBasement) dashboard.setScenario(selectedBasement);
+  ++dashboard.flightToken;
   equipment.equipmentMap.get('DOOR-001').rotation.y = Math.PI / 2;
   entryOverlay.classList.add('hidden');
-  camera.position.set(0, 1.75, 8.9);
+  camera.position.set(0, 1.75, 5.6);
   camera.rotation.set(0, 0, 0);
+  walkYaw = 0; walkPitch = 0;
+  dashboard.switchView('explore');
   showControls();
+  if (dashboard.pendingEquipmentId) {
+    const target = dashboard.pendingEquipmentId;
+    dashboard.pendingEquipmentId = null;
+    document.getElementById('controls-overlay').classList.add('hidden');
+    dashboard.selectEquipment(target);
+  }
+  if (dashboard.pendingSpill) {
+    dashboard.pendingSpill = false;
+    document.getElementById('controls-overlay').classList.add('hidden');
+    dashboard.highlightSpillInScene();
+  }
 }
 document.getElementById('entry-submit').addEventListener('click', enterBasement);
 entryPin.addEventListener('keydown', event => {
   if (event.key === 'Enter') enterBasement();
 });
-entryPin.focus();
 const machineAudio = new AudioContext();
 const machineOscillator = machineAudio.createOscillator();
 const machineGain = machineAudio.createGain();
@@ -179,6 +263,7 @@ machineOscillator.frequency.value = 58;
 machineGain.gain.value = 0;
 machineOscillator.connect(machineGain).connect(machineAudio.destination);
 machineOscillator.start();
+dashboard.onProcessStopped = () => machineGain.gain.setTargetAtTime(0, machineAudio.currentTime, 0.1);
 document.getElementById('btn-start-system').addEventListener('click', () => {
   machineAudio.resume();
   machineGain.gain.setTargetAtTime(0.012, machineAudio.currentTime, 0.5);
@@ -189,21 +274,37 @@ document.getElementById('btn-start-system').addEventListener('click', () => {
   document.getElementById('btn-start-system').textContent = '● Resin system running';
   document.getElementById('btn-auto-advance').textContent = 'Auto-Advancing: ON';
 });
-document.getElementById('scan-exit').addEventListener('click', () => {
+function leaveInspectionFullscreen() {
   document.body.classList.remove('inspection-active');
   document.getElementById('scan-hud').classList.add('hidden');
   if (document.fullscreenElement) document.exitFullscreen();
+}
+function enterInspectionFullscreen() {
+  if (dashboard.activeView !== 'inspection') return;
+  document.body.classList.add('inspection-active');
+  document.getElementById('scan-hud').classList.remove('hidden');
+  document.querySelector('.viewport-container').requestFullscreen?.().catch(() => leaveInspectionFullscreen());
+}
+dashboard.onRequestFullscreen = enterInspectionFullscreen;
+document.getElementById('btn-enter-fullscreen').addEventListener('click', enterInspectionFullscreen);
+document.getElementById('scan-exit').addEventListener('click', leaveInspectionFullscreen);
+document.getElementById('scan-pause').addEventListener('click', () => dashboard.pauseInspection());
+document.getElementById('scan-resume').addEventListener('click', () => dashboard.resumeInspection());
+document.getElementById('scan-stop').addEventListener('click', () => dashboard.stopInspection());
+document.getElementById('scan-report').addEventListener('click', () => {
+  dashboard.stopInspection();
+  leaveInspectionFullscreen();
+  dashboard.switchView('report');
 });
 document.addEventListener('fullscreenchange', () => {
   if (!document.fullscreenElement) {
     document.body.classList.remove('inspection-active');
     document.getElementById('scan-hud').classList.add('hidden');
   }
+  window.dispatchEvent(new Event('resize'));
 });
 let isDragging = false;
 let previousPointer = { x: 0, y: 0 };
-let walkPitch = 0;
-let walkYaw = 0;
 
 window.addEventListener('keydown', e => {
   if (!entryOpen || !controlsOverlay.classList.contains('hidden')) return;
@@ -213,6 +314,8 @@ window.addEventListener('keydown', e => {
   keys.add(k);
   if (k === ' ') {
     rover.emergencyStop();
+    dashboard.interruptInspection();
+    dashboard.updateLiveProgress();
   }
 });
 
@@ -256,7 +359,7 @@ renderer.domElement.addEventListener('pointerup', e => {
 });
 renderer.domElement.addEventListener('pointercancel', () => { isDragging = false; });
 renderer.domElement.addEventListener('wheel', e => {
-  if (!entryOpen) return;
+  if (!entryOpen && !document.body.classList.contains('equipment-preview-open')) return;
   e.preventDefault();
   camera.fov = T.MathUtils.clamp(camera.fov + e.deltaY * 0.025, 38, 90);
   camera.updateProjectionMatrix();
@@ -278,7 +381,7 @@ function handleEquipmentRaycast(e) {
     let obj = hit.object;
     while (obj && obj !== scene) {
       if (obj.userData && obj.userData.spec) {
-        dashboard.selectEquipment(obj.userData.spec.id);
+        dashboard.selectEquipment(obj.userData.spec.id, { distant: dashboard.activeView === 'pfd' });
         return;
       }
       obj = obj.parent;
@@ -306,7 +409,7 @@ if (touchControls.fwd) {
 }
 
 // Camera View Mode Switching
-document.querySelectorAll('.view-btn').forEach(btn => {
+document.querySelectorAll('.view-btn[data-cam]').forEach(btn => {
   btn.addEventListener('click', () => {
     activeCamView = btn.dataset.cam;
     const drivingHud = document.getElementById('robot-driving-hud');
@@ -319,7 +422,7 @@ if (dashboard.activeView === 'inspection') document.querySelector('.view-btn[dat
 
 // Walking in Walk Mode
 function updateWalkMotion(dt) {
-  if (!entryOpen || !controlsOverlay.classList.contains('hidden')) return;
+  if (!entryOpen || dashboard.activeView !== 'explore' || !controlsOverlay.classList.contains('hidden')) return;
   if (activeCamView !== 'walk') return;
 
   let moveForward = 0;
@@ -364,23 +467,30 @@ function updateManualDriving(dt) {
   if (keys.has('d') || keys.has('arrowright') || heldTouch.has('right')) turn -= 1;
 
   if (throttle !== 0 || turn !== 0) {
+    const wasAutomatic = rover.isMoving || rover.state === 'Station Dwell / Observing';
     rover.manualDrive(throttle, turn, dt);
+    if (wasAutomatic) dashboard.stopSpeech();
+    if (dashboard.inspectionSession.status === 'In Progress') {
+      document.getElementById('scan-title').textContent = 'SCOUT-01 • MANUAL CONTROL';
+      document.getElementById('scan-detail').textContent = 'Automatic route paused. Use Resume from here when ready.';
+    }
   }
 }
 
 // Update Camera Pose depending on mode
 function updateCameraPose() {
   if (activeCamView === 'follow') {
-    // Smooth chase-cam 2.4m behind rover
+    // Keep the camera close and above the rover; pull it forward if a structure occludes it.
     const angle = rover.root.rotation.y;
     const offset = new T.Vector3(
-      Math.sin(angle) * 2.4,
-      1.8,
-      Math.cos(angle) * 2.4
+      Math.sin(angle) * 1.85,
+      2.65,
+      Math.cos(angle) * 1.85
     );
-    const targetPos = rover.root.position.clone().add(offset);
-    camera.position.lerp(targetPos, 0.12);
-    camera.lookAt(rover.root.position.x, rover.root.position.y + 0.65, rover.root.position.z);
+    const desired = rover.root.position.clone().add(offset);
+    const targetPos = isFree(desired.x, desired.z, 0.15) ? desired : rover.root.position.clone().add(new T.Vector3(0, 2.85, 0.5));
+    camera.position.lerp(targetPos, 0.2);
+    camera.lookAt(rover.root.position.x - Math.sin(angle) * 0.6, 0.8, rover.root.position.z - Math.cos(angle) * 0.6);
   } else if (activeCamView === 'camera') {
     // First-person view directly from masthead camera lens!
     const worldCamPos = new T.Vector3();
@@ -396,6 +506,9 @@ function updateCameraPose() {
         .applyQuaternion(rover.root.quaternion)
     );
     camera.lookAt(lookTarget);
+  } else if (activeCamView === 'top') {
+    camera.position.lerp(new T.Vector3(rover.root.position.x, 6.65, rover.root.position.z + 0.1), 0.24);
+    camera.lookAt(rover.root.position.x, 0.2, rover.root.position.z - 0.2);
   }
 }
 
@@ -434,7 +547,11 @@ function animate(now) {
   }
 
   // 7. WebGL Render
-  renderer.render(scene, camera);
+  if (['access', 'explore', 'inspection'].includes(dashboard.activeView) || (dashboard.activeView === 'pfd' && document.body.classList.contains('equipment-preview-open'))) {
+    if (activeCamView === 'top') topViewOccluders.forEach(object => { object.visible = false; });
+    renderer.render(scene, camera);
+    if (activeCamView === 'top') topViewOccluders.forEach(object => { object.visible = true; });
+  }
 }
 
 // Window Resize Handling

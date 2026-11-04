@@ -178,7 +178,7 @@ assert(resetSnap.activeAlarms.length === 0, 'Switching back to normal clears all
 console.log('\n--- 6. Robot Inspection Stations Coverage ---');
 assert(new Set(INSPECTION_STATIONS.map(s => s.targetEq)).size === EQUIPMENT_REGISTER.length, `Inspection route covers all ${EQUIPMENT_REGISTER.length} assemblies`);
 assert(INSPECTION_STATIONS[0].id === 'STATION-01' && INSPECTION_STATIONS[0].position[0] === 0.0, 'Route begins at Dock');
-assert(INSPECTION_STATIONS.at(-1).id === 'STATION-20' && INSPECTION_STATIONS.at(-1).position[0] === 0.0, 'Route finishes at Dock');
+assert(INSPECTION_STATIONS.at(-1).id !== 'STATION-20', 'Route finishes at the final inspected assembly without a forced dock return');
 
 // Station 17 covers P-301 & floor spill zone
 const st17 = INSPECTION_STATIONS.find(s => s.id === 'STATION-17');

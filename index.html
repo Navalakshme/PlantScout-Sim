@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PlantScout — Alkyd-Resin Basement Simulation & Robot Inspection</title>
-  <link rel="stylesheet" href="./styles.css?v=20261103">
+  <link rel="stylesheet" href="./styles.css?v=20261104">
+  <link rel="stylesheet" href="./workspace.css?v=20261104j">
 </head>
-<body class="dark-theme">
+<body class="dark-theme" data-screen="overview" data-basement="normal">
   <!-- Top App Navigation Bar -->
   <header class="topbar">
     <div class="brand">
       <span class="brand-icon">⬡</span>
       <span class="brand-title">PlantScout</span>
-      <span class="brand-sub">Basement B1 / Alkyd-Resin Simulation</span>
+      <span class="brand-sub" id="brand-location">Resin plant / Overview</span>
     </div>
 
     <div class="topbar-center">
@@ -29,7 +30,7 @@
     </div>
 
     <div class="topbar-right">
-      <div id="ai-status-pill" class="status-pill unconfigured" title="Checking Meta Llama AI model status...">
+      <div id="ai-status-pill" class="status-pill unconfigured" title="Checking Meta Muse Spark camera analysis status...">
         Meta AI: Checking...
       </div>
       <div class="status-pill info">
@@ -42,34 +43,32 @@
   <div class="app-layout">
     <!-- Fixed Left Sidebar -->
     <aside class="sidebar">
-      <div class="sidebar-section">
+      <div class="sidebar-section scenario-picker">
         <label class="sidebar-label" for="scenario-select">OPERATING SCENARIO</label>
         <select id="scenario-select" class="sidebar-select">
-          <option value="normal">Normal Basement (Seed 42)</option>
-          <option value="defective">Defective Basement (Seed 1337)</option>
+          <option value="normal">Basement 1 — Normal</option>
+          <option value="defective">Basement 2 — Defects</option>
         </select>
       </div>
 
       <nav class="sidebar-nav">
-        <div class="sidebar-label">NAVIGATION & VIEWS</div>
-        <button data-view="overview" class="nav-btn">
-          <span class="nav-icon">📊</span> 1. Overview
-        </button>
-        <button data-view="explore" class="nav-btn active">
-          <span class="nav-icon">🧭</span> 2. Explore complete basement
-        </button>
-        <button data-view="inspection" class="nav-btn">
-          <span class="nav-icon">🤖</span> 3. Start inspection
-        </button>
-        <button data-view="report" class="nav-btn">
-          <span class="nav-icon">📋</span> 4. Inspection report
-        </button>
-        <button data-view="pfd" class="nav-btn">
-          <span class="nav-icon">🔄</span> 5. Equipment and process flow
-        </button>
+        <div class="sidebar-label">WORKSPACE</div>
+        <button data-view="overview" class="nav-btn active"><span class="nav-icon">◫</span> Overview</button>
+        <div class="sidebar-label nav-group">BASEMENT 1 · NORMAL</div>
+        <button data-view="access" data-scenario="normal" class="nav-btn"><span class="nav-icon">▣</span> B1 · Access</button>
+        <button data-view="explore" data-scenario="normal" class="nav-btn"><span class="nav-icon">⌖</span> B1 · Explore</button>
+        <button data-view="inspection" data-scenario="normal" class="nav-btn"><span class="nav-icon">◇</span> B1 · Robot inspection</button>
+        <div class="sidebar-label nav-group">BASEMENT 2 · DEFECTS</div>
+        <button data-view="access" data-scenario="defective" class="nav-btn"><span class="nav-icon">▣</span> B2 · Access</button>
+        <button data-view="explore" data-scenario="defective" class="nav-btn"><span class="nav-icon">⌖</span> B2 · Explore</button>
+        <button data-view="inspection" data-scenario="defective" class="nav-btn"><span class="nav-icon">◇</span> B2 · Robot inspection</button>
+        <div class="sidebar-label nav-group">REFERENCE & RESULTS</div>
+        <button data-view="report" class="nav-btn"><span class="nav-icon">▤</span> Reports</button>
+        <button data-view="pfd" class="nav-btn"><span class="nav-icon">⤳</span> Equipment &amp; process</button>
+        <button data-view="controls" class="nav-btn"><span class="nav-icon">⌨</span> Controls &amp; help</button>
       </nav>
 
-      <button id="btn-controls" class="nav-btn controls-link" type="button">⌨ Controls &amp; movement</button>
+      <button id="btn-controls" class="nav-btn controls-link" type="button">⌨ Quick movement guide</button>
 
       <div class="sidebar-section sim-controls">
         <div class="sidebar-label">PROCESS ENGINE (FATTY-ACID ROUTE)</div>
@@ -90,10 +89,23 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
+      <section id="workspace-heading" class="workspace-heading" aria-live="polite">
+        <div><span id="workspace-eyebrow" class="workspace-eyebrow">PLANTSCOUT / WORKSPACE</span><h1 id="workspace-title">Overview</h1><p id="workspace-subtitle">Choose a basement and follow the inspection workflow.</p></div>
+        <button id="btn-reset-view" class="btn-secondary" type="button">Reset view</button>
+      </section>
+      <section id="home-screen" class="home-screen">
+        <div class="home-hero"><div class="home-copy"><span class="workspace-eyebrow">CHEMICAL RESIN PLANT · VIRTUAL INSPECTION</span><h2>Explore the plant. Watch the process. Verify with a robot.</h2><p>Start with a basement, approach its locked door, then explore or run a guided inspection. Each basement has its own findings and report.</p></div></div>
+        <div class="home-grid">
+          <article class="basement-choice"><span class="choice-index">01 / NORMAL</span><h3>Basement 1</h3><p>Follow the operating resin process and learn the expected equipment behavior.</p><button id="home-open-normal" class="btn-primary" type="button">Enter Basement 1 →</button></article>
+          <article class="basement-choice defective-choice"><span class="choice-index">02 / DEFECTS</span><h3>Basement 2</h3><p>Investigate the floor spill, hot bearing, clogged filter, cut solvent line, detector alarm, and sample particles.</p><button id="home-open-defective" class="btn-primary" type="button">Enter Basement 2 →</button></article>
+          <article class="home-steps"><span class="choice-index">GUIDED FLOW</span><h3>What happens next</h3><ol><li>Approach and unlock the door</li><li>Explore and start the resin system</li><li>Run the robot inspection</li><li>Review evidence in Reports</li></ol></article>
+        </div>
+      </section>
       <!-- 3D WebGL Viewport Container -->
       <div class="viewport-container">
         <div id="viewport" aria-label="Interactive 3D Basement Viewport"></div>
-        <div id="scan-hud" class="scan-hud hidden" role="status" aria-live="polite"><b id="scan-title">SCOUT-01</b><span id="scan-detail">Preparing inspection</span><button id="scan-exit" type="button">Exit inspection view</button></div>
+        <div id="equipment-preview-hud" class="equipment-preview-hud"><div><span class="workspace-eyebrow">EQUIPMENT VIEW</span><strong id="equipment-preview-title">Select an assembly</strong><small>Framed with surrounding equipment and connected lines</small></div><button id="btn-close-equipment-preview" class="btn-secondary" type="button">Close 3D view</button></div>
+        <div id="scan-hud" class="scan-hud hidden" role="status" aria-live="polite"><b id="scan-title">SCOUT-01</b><span id="scan-detail">Preparing inspection</span><label class="scan-speed">Speed <select id="scan-speed-select" aria-label="Full screen inspection speed"><option value="1">1×</option><option value="2.5">2.5×</option><option value="5">5×</option></select></label><button id="scan-pause" type="button">Pause</button><button id="scan-resume" type="button">Resume</button><button id="scan-stop" type="button">Stop inspection</button><button id="scan-report" type="button">End &amp; report</button><button id="scan-exit" type="button">Exit full view</button></div>
 
         <!-- Overlaid View Controls -->
         <div class="viewport-overlay top-left">
@@ -101,6 +113,8 @@
             <button class="view-btn active" data-cam="walk">Walk View</button>
             <button class="view-btn" data-cam="follow">Follow Robot</button>
             <button class="view-btn" data-cam="camera">Masthead Camera</button>
+            <button class="view-btn" data-cam="top">Top View</button>
+            <button id="btn-reset-camera" class="view-btn" type="button">Reset camera</button>
           </div>
         </div>
 
@@ -212,7 +226,11 @@
         <div class="inspection-actions-bar">
           <button id="btn-start-inspection" class="btn-primary">▶ Start Autonomous Inspection</button>
           <button id="btn-pause-inspection" class="btn-secondary">⏸ Pause Route</button>
+          <button id="btn-resume-inspection" class="btn-secondary">↗ Resume from here</button>
           <button id="btn-reset-dock" class="btn-secondary">↺ Reset to Dock</button>
+          <button id="btn-stop-inspection" class="btn-secondary" type="button">■ Stop inspection</button>
+          <button id="btn-end-inspection" class="btn-secondary" type="button">End &amp; view report</button>
+          <button id="btn-enter-fullscreen" class="btn-secondary" type="button">⛶ Full screen</button>
           <label class="speed-label">
             Route Speed:
             <select id="inspection-speed-select" class="sidebar-select">
@@ -222,13 +240,25 @@
             </select>
           </label>
         </div>
-        <p class="micro">Start the resin system first. Inspection holds the filtration stage for a repeatable equipment check. SCOUT-01 visits all 37 assemblies, records masthead photos, compares simulated instruments with thresholds, and sends selected frames to Meta Muse Spark (maximum 10 calls per run).</p>
+        <p class="micro">Start inspection in one step. SCOUT-01 records a photo and sensor readings at every stop. Meta Muse Spark analyzes selected images (at most 10 requests per run) and writes the spoken summary; the browser reads it aloud. Simulator-only findings stay clearly labelled.</p>
+        <div id="travel-scan-status" class="travel-scan-status" aria-live="polite">Robot ready to inspect upper sensors, lower sensors, opposite equipment, and floor.</div>
       </div>
+      <section id="live-inspection-panel" class="sub-panel live-inspection-panel" aria-label="Live inspection findings">
+        <div class="live-heading"><div><span class="workspace-eyebrow">LIVE EVIDENCE</span><h2>Inspection as it happens</h2></div><b id="live-progress">0 / 37 checked</b></div>
+        <p id="live-status">Start the robot inspection to see each equipment result here.</p>
+        <div id="live-current" class="live-current">Current check: waiting to start</div>
+        <div id="live-findings-list" class="live-findings-list"></div>
+      </section>
 
       <!-- Process Flow Diagram Panel (PFD mode) -->
       <div id="pfd-panel" class="sub-panel hidden">
+        <div class="process-spine" aria-label="Main resin process sequence"><span>Feed vessels</span><i>→</i><span>R-101 Reactor</span><i>→</i><span>E-201 Condenser</span><i>→</i><span>BL-301 Blender</span><i>→</i><span>F-301 Filter</span><i>→</i><span>TK-401 Storage</span><i>→</i><span>FL-401 Filling</span></div>
         <div id="pfd-container"></div>
       </div>
+
+      <section id="controls-page" class="controls-page">
+        <div class="help-grid"><article><h2>Move through the basement</h2><p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to walk. Drag the scene to look around. Scroll to zoom. Select a machine to read its function and instruments.</p></article><article><h2>Robot controls</h2><p>Choose Follow Robot or Masthead Camera on the inspection screen. Use W/S to drive and A/D to steer. Manual control pauses the automatic route; use Resume from here to continue.</p></article><article><h2>Recover your view</h2><p>Reset camera restores a clear view. Close an equipment detail to return to the camera position you had before selecting it.</p></article><article><h2>Inspection workflow</h2><p>Choose Basement 1 or 2. Approach its door and enter the demonstration PIN. Start the process or launch inspection, then open Reports and select that basement.</p></article></div>
+      </section>
 
       <!-- Equipment Details Inspection Drawer / Modal -->
       <div id="equipment-details-modal" class="modal-drawer hidden">
@@ -253,6 +283,7 @@
             <h2>Basement Survey Findings &amp; Evidence Log</h2>
           </div>
           <div class="report-actions">
+            <div class="report-basement-tabs" role="group" aria-label="Choose basement report"><button class="report-tab active" data-report="normal" type="button">Basement 1</button><button class="report-tab" data-report="defective" type="button">Basement 2</button></div>
             <button id="btn-download-json" class="btn-secondary">📥 Export JSON Report</button>
             <button id="btn-print-report" class="btn-secondary">🖨 Print / PDF Export</button>
           </div>
@@ -291,12 +322,20 @@
           No configured anomalies observed in inspected areas.
         </div>
 
+        <section id="report-evidence-viewer" class="report-evidence-viewer hidden" aria-label="Selected evidence photo"><div class="evidence-viewer-heading"><div><span class="workspace-eyebrow">SELECTED EVIDENCE</span><h3 id="evidence-viewer-title">Captured robot frame</h3></div><button id="btn-close-evidence" type="button" class="btn-secondary">Close photo</button></div><div class="evidence-viewer-body"><div class="evidence-image-frame"><img id="evidence-viewer-image" alt="Full captured robot camera frame"><div id="evidence-visual-box" class="evidence-visual-box hidden" aria-label="Meta model visual highlight"></div></div><div><b id="evidence-viewer-tag"></b><p id="evidence-viewer-note"></p><small id="evidence-viewer-source"></small></div></div></section>
+
         <!-- Evidence Findings List -->
         <div class="report-subsection">
           <h3>Observed Station Findings &amp; Visual Evidence</h3>
           <div id="rep-findings-list" class="findings-grid">
             <p class="micro">Launch "Start Inspection" to gather visual evidence frames and analyze equipment condition.</p>
           </div>
+        </div>
+
+        <div class="report-subsection">
+          <div class="travel-log-heading"><h3>Travel scan log</h3><button id="btn-toggle-travel-log" class="btn-secondary" type="button">Show full log</button></div>
+          <p class="micro">Upper, lower, opposite-side, and floor checks are simulated telemetry or scenario checks. Camera findings appear above.</p>
+          <div id="rep-travel-log" class="travel-log">No travel scans recorded yet.</div>
         </div>
 
         <!-- Equipment Coverage Breakdown Table -->
@@ -324,17 +363,16 @@
     </main>
   </div>
 
-  <div id="entry-overlay" class="entry-overlay" role="dialog" aria-modal="true" aria-labelledby="entry-title">
+  <div id="entry-overlay" class="entry-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="entry-title">
     <div class="entry-card">
-      <span class="entry-kicker">PLANTSCOUT • BASEMENT B1</span>
-      <h2 id="entry-title">Personnel entrance</h2>
-      <p>The process hall is behind the sealed access door. Enter the demonstration PIN to open it.</p>
-      <label for="entry-basement">Choose a basement</label>
-      <select id="entry-basement"><option value="normal">Descend to Basement 1 — normal operation</option><option value="defective">Descend to Basement 2 — defects to inspect</option></select>
-      <label for="entry-pin">Access PIN</label>
-      <div class="entry-form"><input id="entry-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4-digit PIN"><button id="entry-submit" type="button">Unlock &amp; enter</button></div>
+      <span id="entry-kicker" class="entry-kicker">PLANTSCOUT • BASEMENT 1</span>
+      <h2 id="entry-title">Sealed personnel entrance</h2>
+      <p id="entry-instruction">The door is closed. Approach it before entering the demonstration PIN.</p>
+      <button id="entry-approach" class="btn-primary" type="button">Approach door →</button>
+      <div id="entry-pin-step" class="hidden"><label for="entry-pin">Access PIN</label><div class="entry-form"><input id="entry-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4-digit PIN"><button id="entry-submit" type="button">Unlock &amp; enter</button></div><small>Demo PIN: 2048</small></div>
+      <select id="entry-basement" class="hidden"><option value="normal">Basement 1</option><option value="defective">Basement 2</option></select>
       <p id="entry-error" class="entry-error" aria-live="polite"></p>
-      <small>Demo PIN: 2048</small>
+      <button id="entry-back" type="button">← Back to overview</button>
     </div>
   </div>
 
@@ -356,6 +394,6 @@
     }
   }
   </script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20261104j"></script>
 </body>
 </html>
